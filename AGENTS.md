@@ -10,6 +10,4 @@ Read [docs/DESIGN.md](docs/DESIGN.md) before writing code. Use it in this order:
 
 One milestone per session. Do not start the next milestone in the same change. When a milestone is finished, set its status to `done` in the table and add one line under the milestone: what landed, and anything the next agent must know.
 
-The owner's Mac checkout path is `/Users/songye/Development/vendor_tracker`. In a cloud workspace, the repository root is the project root. Do not create `/Users/songye` on the remote machine.
-
 UI milestones are done only after the flow has been exercised in a browser (or, if no browser is available, against the running local server) and the result is described in the milestone note.
