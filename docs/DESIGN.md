@@ -8,15 +8,15 @@ Local, single-user app for artist-alley applications.
 - Read that milestone's section, plus "Locked decisions", "Domain model", and "Inbox".
 - Stay inside that milestone. Leave later milestones alone.
 - When you finish, mark the row `done` and add a short note (date, what landed, follow-ups).
-- Business rules that change the board live in pure functions with unit tests. UI calls those functions. Detectors insert inbox items. They do not update applications.
+- Business rules that change the board live in pure functions with unit tests. UI calls those functions. Detectors insert inbox items. They do not update an edition's status.
 
 ## Milestone status
 
 | ID | Status | One line |
 | --- | --- | --- |
 | M0 | done | This design document. |
-| M1 | not started | Scaffold the local app, SQLite, and an empty shell. |
-| M2 | not started | Manual series, editions, and applications. |
+| M1 | done | Scaffold the local app, SQLite, and an empty shell. |
+| M2 | not started | Manual series and editions. |
 | M3 | not started | Import the Google Sheet, with a review queue. |
 | M4 | not started | Inbox and human approval. Seed items by hand. |
 | M5 | not started | Google account connection and Calendar projection. |
@@ -63,10 +63,10 @@ flowchart LR
 ## Locked decisions
 
 - **One person.** No accounts, roles, or sharing. The first Google account to connect becomes the owner, unless `OWNER_EMAIL` is set, in which case OAuth must match that address.
-- **Artist alley only.** One application per edition. Booth type is `artist_alley`. When a page lists dealer dates and alley dates, the alley date is the one that matters. A generic vendor page is a low-confidence proposal.
+- **Artist alley only.** An edition is the owner's alley application for that occurrence. When a page lists dealer dates and alley dates, the alley date is the one that matters. A generic vendor page is a low-confidence proposal.
 - **Local app.** Next.js UI and a worker in one repo, SQLite on disk, run on the owner's machine. Not a hosted multi-user service.
 - **Human approval for every change.** Detectors and the clock create inbox items. Status, application dates, and calendar events change only when the owner uses a button on an item. Marking an item read does not approve it.
-- **Reminders.** Approved opening dates become all-day Google Calendar events in `America/Los_Angeles`, with a reminder the day before and the morning of. The in-app inbox has read and unread state.
+- **Reminders.** A saved con start date and a confirmed application open date each become an all-day Google Calendar event in `America/Los_Angeles`, with a reminder the day before and the morning of. The in-app inbox has read and unread state.
 - **Drive range.** "Local" means within 12 hours of driving from San Mateo, CA. The discovery inbox defaults to that range. Farther cons stay in a second list. The owner can track a fly-to con by adding it.
 - **Watch list.** Pages and Discord channels are polled only for series the owner is still tracking or applying to. Pass rows are not polled.
 - **Discord.** A bot invited to a server, on channel ids the owner configures. A self-bot on the owner's user token is forbidden.
@@ -111,9 +111,8 @@ erDiagram
   Convention ||--o{ Alias : has
   Convention ||--o{ Edition : holds
   Convention ||--o{ Watch : watches
-  Edition ||--|| Application : "artist alley"
-  Edition ||--o| CalendarEvent : projects
-  Application ||--o{ InboxItem : proposes
+  Edition ||--o{ CalendarEvent : "start and open"
+  Edition ||--o{ InboxItem : proposes
   Convention ||--o{ SenderRule : recognizes
   DiscoveryCandidate }o--o| Convention : "may match"
 ```
@@ -163,15 +162,20 @@ One occurrence. Cycle label examples: `2027`, `2027-winter`, `109` (Comiket).
 | --- | --- |
 | convention_id, cycle_label | Unique together. |
 | start_date, end_date | When the event runs. The sheet often has only a start. End may be null. |
-| application_start | Day artist-alley applications open. Null until known. |
-| application_end | Day they close. Null until known. |
-| application_confirmed | False for an imported window. The clock and Calendar use the application dates only when this is true. |
-| calendar_event_id | Google event id for the open-date alarm. Null until created. |
+| application_start_date | Day artist-alley applications open. Null until known. |
+| application_end_date | Day they close. Null until known. |
+| application_confirmed | False for an imported window. The clock and the open-date calendar event use the application dates only when this is true. |
+| start_date_calendar_event_id | Google event id for `start_date`. Null until created. |
+| application_start_date_calendar_event_id | Google event id for a confirmed `application_start_date`. Null until created. |
 | venue, city, region, country | City is what drive time uses. |
-| attendance_text | Kept as text (`27,500`, `1,000+`, `Unknown`). |
-| event_status | `announced`, `postponed`, `cancelled`. |
+| attendance | Integer expected attendance. Null when unknown. Import strips commas and a trailing plus: `27,500` is 27500, `1,000+` is 1000, `Unknown` is null. |
+| intent | `tracking`, `applying`, or `skip`. |
+| status | See the status vocabulary. |
+| submitted_at, result_at | Dates. Either may be null. |
+| paid | The owner toggles this on an accepted card. No detector sets it. |
+| notes | The sheet's 注释 column. A reason for skipping goes here. |
 
-The clock's notices and the calendar reminder are scheduled from `application_start` and `application_end`. An imported window stays unconfirmed and gets a review inbox item instead of a calendar event. The owner confirms it from the inbox or by editing the edition. Only `application_start` becomes a calendar event. `application_end` is shown on the open item and tells the clock when the window ended.
+The clock's notices are scheduled from `application_start_date` and `application_end_date`. The calendar gets two all-day events: one on `start_date`, and one on a confirmed `application_start_date`. An imported window stays unconfirmed and gets a review inbox item instead of an open-date calendar event. The owner confirms it from the inbox or by editing the edition. `application_end_date` is shown on the open item and tells the clock when the window ended. `end_date` and `application_end_date` do not get calendar events. Import writes the dates and leaves both event ids null.
 
 Identity rules for matching a name to a series:
 
@@ -179,27 +183,11 @@ Identity rules for matching a name to a series:
 - `Comic Market 108` and `Comiket 109` are convention Comiket, cycle `108` or `109`.
 - SacAnime Summer and SacAnime Winter are one convention, cycles `2026-summer` and `2027-winter`.
 
-### Application
-
-Exactly one per edition in v1.
-
-| Field | Notes |
-| --- | --- |
-| booth_type | Always `artist_alley`. |
-| intent | `tracking`, `applying`, `skip`. |
-| cycle | See vocabulary below. |
-| submitted_at, result_at | Dates. |
-| skip_reason | `attendance`, `audience`, `travel`, `fee`, `missed`, `other`. |
-| notes | The sheet's 注释 column. |
-| needs_review | Set by import when a date or status was ambiguous. |
-
-`paid` is a boolean the owner toggles on an accepted card. No detector sets it.
-
 ### Watch
 
 Attached to a convention. Kinds: `html`, `eventeny`, `eventhub`, `google_form`, `discord_channel`.
 
-Fields: target URL or Discord channel id, `last_hash`, `last_fetched_at`, `last_error`. Polling runs only when `polling_enabled` is true and the latest edition's intent is `tracking` or `applying` and its cycle is not `rejected`, `withdrawn`, or left as a skip.
+Fields: target URL or Discord channel id, `last_hash`, `last_fetched_at`, `last_error`. Polling runs only when `polling_enabled` is true and the latest edition's intent is `tracking` or `applying` and its status is not `rejected`, `withdrawn`, `attended`, or `passed`.
 
 ### Inbox item
 
@@ -235,9 +223,9 @@ Dedupe keys:
 
 ## Status vocabulary
 
-Intent and cycle are separate. The board column is the cycle, except `intent = skip`, which is the Pass column.
+Intent and status are separate. The board column is the status.
 
-| Cycle | Meaning | Board column |
+| Status | Meaning | Board column |
 | --- | --- | --- |
 | `unknown` | No application state yet. | Tracking, if intent is tracking. |
 | `not_open` | Watching, window not open. | Tracking |
@@ -245,36 +233,38 @@ Intent and cycle are separate. The board column is the cycle, except `intent = s
 | `submitted` | Owner applied. | Applied |
 | `waitlisted` | | Waitlist |
 | `accepted` | | Accepted |
+| `attended` | Owner went. Set by hand. No detector sets it. | Attended |
 | `rejected` | | Rejected |
 | `withdrawn` | Owner backed out. | A filter, not a primary column. |
+| `passed` | Owner decided not to apply. | Pass |
 
 Sheet words on import:
 
-| Sheet 状态 | intent | cycle |
+| Sheet 状态 | intent | status |
 | --- | --- | --- |
 | 留意中 | tracking | `not_open` if an open date is in the future, else `unknown` |
 | 已申请 | applying | `submitted` |
 | Waitlist | applying | `waitlisted` |
 | 已通过 | applying | `accepted` |
 | 已拒绝 | applying | `rejected` |
-| Pass | skip | `unknown`. Skip reason from the note when it mentions attendance, travel, fee, or audience (偏美漫 → `audience`). |
-| 申请已结束 | tracking | leave cycle `unknown`, `needs_review` true. Do not guess `missed`. |
+| Pass | skip | `passed`. The note is stored in `notes`. |
+| 申请已结束 | tracking | `unknown`. Do not guess that the owner missed it. The row stays in the review queue. |
 
-`申请日期` heuristic, always shown in the review queue when `needs_review` is set:
+`申请日期` heuristic. A matching situation below is the proposal. An unresolved date, or an ended window, stays on `/import` until the owner accepts or edits it:
 
 | Situation | Proposal |
 | --- | --- |
-| Result date present, and cycle is submitted, waitlisted, accepted, or rejected | `申请日期` is `submitted_at`. Result date is `result_at`. |
-| 留意中, date present | `申请日期` is an unconfirmed `application_start`. |
+| Result date present, and status is submitted, waitlisted, accepted, attended, or rejected | `申请日期` is `submitted_at`. Result date is `result_at`. |
+| 留意中, date present | `申请日期` is an unconfirmed `application_start_date`. |
 | 申请已结束, date present, note contains a range such as `9/12 - 9/20` | Propose open and close from the note. |
 | Anything else with a date | Unresolved date. Do not attach it to submitted_at or the application dates until the owner picks. |
 
 Examples from the sheet:
 
-- FanimeCon 27, 留意中, 11/08/2026, note 限时申请 → `application_start` 2026-11-08, unconfirmed, intent tracking.
-- SacAnime Summer 26, 已拒绝, 申请日期 6/5/2026, 申请结果 6/17/2026 → submitted 2026-06-05, result 2026-06-17, cycle rejected.
-- Zenkaikon, 申请已结束, date 2026-09-12, note `AA申请 9/12 - 9/20` → propose open 2026-09-12 and close 2026-09-20, needs review.
-- SJ Made Winter Wonder Market, 已通过 → cycle accepted. Same for other San José Made markets, under one convention "San José Made".
+- FanimeCon 27, 留意中, 11/08/2026, note 限时申请 → `application_start_date` 2026-11-08, unconfirmed, intent tracking.
+- SacAnime Summer 26, 已拒绝, 申请日期 6/5/2026, 申请结果 6/17/2026 → submitted 2026-06-05, result 2026-06-17, status rejected.
+- Zenkaikon, 申请已结束, date 2026-09-12, note `AA申请 9/12 - 9/20` → propose open 2026-09-12 and close 2026-09-20 in the review queue.
+- SJ Made Winter Wonder Market, 已通过 → status accepted. Same for other San José Made markets, under one convention "San José Made".
 
 Series merges the importer should propose, not apply silently: FanimeCon 26 with 27, SacAnime Summer with Winter, Comic Market 108 with 109. Those already collapse under the identity rules, so confirming one does not insert an alias. A name that stays different, such as `cpac` for Castlepoint, is proposed as an alias and inserted only when the owner confirms it.
 
@@ -297,14 +287,14 @@ Buttons and the only writes they may perform:
 
 | Kind | Buttons | Writes |
 | --- | --- | --- |
-| `opening_date` | Save date, Save with edits, Dismiss, Snooze | Set `application_start` and, if present, `application_end`. Set `application_confirmed`. Sync Calendar for the open date. Leave intent and cycle alone. |
-| `applications_open` | I submitted, Skip, Snooze | Submitted sets intent `applying`, cycle `submitted`, `submitted_at` today. Skip sets intent `skip`. |
-| `decision` | Apply this result, Wrong con, Dismiss, Snooze | Apply sets cycle to the proposed `accepted`, `rejected`, or `waitlisted`, and `result_at` from the message date. Wrong con clears the guess and asks for an edition; on pick, store a sender rule. |
+| `opening_date` | Save date, Save with edits, Dismiss, Snooze | Set `application_start_date` and, if present, `application_end_date`. Set `application_confirmed`. Sync Calendar for the open date. Leave intent and status alone. |
+| `applications_open` | I submitted, Skip, Snooze | Submitted sets intent `applying`, status `submitted`, `submitted_at` today. Skip sets intent `skip` and status `passed`. |
+| `decision` | Apply this result, Wrong con, Dismiss, Snooze | Apply sets status to the proposed `accepted`, `rejected`, or `waitlisted`, and `result_at` from the message date. Wrong con clears the guess and asks for an edition; on pick, store a sender rule. |
 | `notice` | Mark read | Sets `read_at` only. |
 
 `applications_open` stays pending until one of those buttons. That persistent item is the nag while a window is open.
 
-A close date in the past, with no submission, resolves the pending `applications_open` item and files a `notice`: "Window ended". It does not change cycle.
+A close date in the past, with no submission, resolves the pending `applications_open` item and files a `notice`: "Window ended". It does not change status.
 
 Low confidence still files the item. The UI shows the quote and an Unconfirmed label. Save is still required.
 
@@ -316,10 +306,10 @@ All of this goes through one function, `resolveInboxItem(db, item, resolution)`,
 
 Runs every few minutes locally. Uses an edition only when `application_confirmed` is true.
 
-- On the Pacific morning of `application_start`, ensure one `notice` for that edition and date: "Artist alley applications open today", linking the form or site.
-- Seven days before a confirmed `application_start`, ensure one notice.
-- On the morning of `application_end`, if cycle is still tracking or `open`, resolve `applications_open` if present and file "Window ended".
-- If today is on or after a confirmed `application_start`, before `application_end`, and cycle is not submitted or terminal, ensure one `applications_open` item.
+- On the Pacific morning of `application_start_date`, ensure one `notice` for that edition and date: "Artist alley applications open today", linking the form or site.
+- Seven days before a confirmed `application_start_date`, ensure one notice.
+- On the morning of `application_end_date`, if status is `unknown`, `not_open`, or `open`, resolve `applications_open` if present and file "Window ended".
+- If today is on or after a confirmed `application_start_date`, before `application_end_date`, and status is `unknown`, `not_open`, or `open`, ensure one `applications_open` item.
 
 The clock does not fetch pages.
 
@@ -327,14 +317,14 @@ The clock does not fetch pages.
 
 Read-only. Poll about every three minutes while the worker runs. Use the history API after the first sync, and store `history_id`.
 
-Consider a message only when it is newer than the edition was created and the matching application is `submitted` or `waitlisted`.
+Consider a message only when it is newer than the edition was created and that edition's status is `submitted` or `waitlisted`.
 
 Classification labels: `accepted`, `rejected`, `waitlisted`, `acknowledgement`, `other`.
 
 - The first three file a `decision` item with a short quote and the Gmail link.
 - Acknowledgement ("we received your application") files nothing.
 - Match order: a known sender domain for that convention, then the convention name or an alias in the subject or body, using the alias function.
-- If several applications could fit, file the item with edition unset and the Wrong-con / pick-edition control. Do not guess.
+- If several editions could fit, file the item with edition unset and the Wrong-con / pick-edition control. Do not guess.
 
 Store the Gmail message id, thread id, and a short quote. Do not store the whole mailbox.
 
@@ -353,7 +343,7 @@ Rule parsers, no model required:
 
 Prose on an `html` watch uses one function, `extractApplicationWindow(text, context) -> { open_date, close_date, open_now, evidence_quote, confidence }`.
 
-Provider is configuration, not a hardcoded vendor: `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`. The context passed in is the convention name, the edition cycle, and the event start date. If `LLM_API_KEY` is empty, skip prose extraction and file nothing from that page. The snapshot is still stored. Rule parsers work without a key.
+Provider is configuration, not a hardcoded vendor: `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`. The context passed in is the convention name, the edition `cycle_label`, and the event start date. If `LLM_API_KEY` is empty, skip prose extraction and file nothing from that page. The snapshot is still stored. Rule parsers work without a key.
 
 After extraction, a checker downgrades confidence to low when:
 
@@ -380,19 +370,18 @@ Image-only announcements, Facebook, and Instagram are invisible to these detecto
 
 ## Calendar
 
-On approval of an open date:
+Two all-day events per edition. Both use `America/Los_Angeles`, with a reminder the day before and at 09:00 local the morning of.
 
-- Create an all-day event on the connected calendar.
-- Title: `{Convention} {cycle} artist alley opens`.
-- Time zone `America/Los_Angeles`.
-- Reminders: one day before, and morning-of (09:00 local).
-- Store the Google event id on the edition.
+| Date | Title | Stored id |
+| --- | --- | --- |
+| `start_date` | `{Convention} {cycle_label} starts` | `start_date_calendar_event_id` |
+| `application_start_date` | `{Convention} {cycle_label} artist alley opens` | `application_start_date_calendar_event_id` |
 
-Approving a corrected date patches that event. Dismissing a proposal leaves the event alone. Clearing `application_start` in the UI deletes the event.
+Saving an edition with a `start_date` creates or patches the start event. Approving an open date creates or patches the open event, and only when `application_confirmed` is true. Approving a corrected date patches that event. Saving a corrected start date patches the other. Dismissing a proposal leaves both events alone. Clearing a date deletes its event.
 
 Scope: `https://www.googleapis.com/auth/calendar.events`. The app only patches event ids it stored.
 
-Notices for "opens today" are in-app. The calendar event is the alarm that works when the laptop is shut.
+Notices for "opens today" are in-app. The calendar events are the alarms that work when the laptop is shut.
 
 ## Discovery and drive time
 
@@ -421,7 +410,7 @@ Seed these planning estimates so the default split is sane (nonstop hours from S
 | Salt Lake City | about 13 | Farther |
 | Seattle | about 13 to 14 | Farther |
 
-The card shows the hours. The cutoff is the `drive_limit_hours` setting, default 12. Track creates the edition and an artist-alley application with intent `tracking`, and copies the con's website onto a watch if one was found.
+The card shows the hours. The cutoff is the `drive_limit_hours` setting, default 12. Track creates the edition with intent `tracking`, and copies the con's website onto a watch if one was found.
 
 AnimeCons does not say whether a con has an artist alley. The owner decides by tracking it.
 
@@ -459,7 +448,7 @@ UI routes:
 
 | Path | Milestone | Purpose |
 | --- | --- | --- |
-| `/` | M2 | Board: Tracking, Applied, Waitlist, Accepted, Rejected, Pass. |
+| `/` | M2 | Board: Tracking, Applied, Waitlist, Accepted, Attended, Rejected, Pass. |
 | `/series/[id]` | M2 | Aliases, editions across years, application dates, watches, notes. |
 | `/import` | M3 | Review ambiguous rows and proposed merges. |
 | `/inbox` | M4 | Unread and pending. Read is not approval. |
@@ -500,19 +489,21 @@ Done when `pnpm dev` serves the home page and a second launch reuses the same SQ
 
 Do not build the board, OAuth, or detectors.
 
+2026-11-04: Next.js on 127.0.0.1:4747 with Tailwind, shadcn, Drizzle, and better-sqlite3. The home page states that this is the artist-alley tracker and that an opening date, an open window, or a decision waits for approval. First launch created `data/vendor.sqlite`; a second launch reused that file. The worker starts from `instrumentation.ts` and from `pnpm worker`, and it has no detectors. Next agent: the database has no domain tables yet.
+
 ### M2 — Manual model
 
-Migrations for convention, alias, edition, and application. UI to create and edit them, including the application dates, the Pass / skip reason, and the paid toggle. Series page shows that convention's aliases and its editions in cycle order. Board groups applications into the columns above.
+Migrations for convention, alias, and edition. UI to create and edit them, including the application dates, notes, and the paid toggle. Series page shows that convention's aliases and its editions in `cycle_label` order. Board groups editions into the columns above.
 
 Done when you can add FanimeCon, a 2027 edition, an application start of 2026-11-08, and see it on the board under Tracking, then mark it skipped and see it under Pass.
 
-Domain writes go through `src/domain`. Cover cycle and intent changes with unit tests.
+Domain writes go through `src/domain`. Cover status and intent changes with unit tests.
 
 Do not import the sheet. Do not add inbox items yet.
 
 ### M3 — Sheet import
 
-Fetch the public CSV for spreadsheet `1DBenfdO_Q0WZC5pKcRbgCyC94CCDoEyNK9uoJgElK_Q` (the 摆摊 sheet) or accept a downloaded CSV at `data/sheet.csv`. Apply the vocabulary and date heuristic. Proposed series merges, proposed aliases, and every `needs_review` row appear on `/import` until accepted or edited. Import leaves `polling_enabled` off on every convention, including maker-fair rows such as San José Made. The owner turns polling on. Re-running import is idempotent: match on a stored sheet-row key, do not duplicate conventions.
+Fetch the public CSV for spreadsheet `1DBenfdO_Q0WZC5pKcRbgCyC94CCDoEyNK9uoJgElK_Q` (the 摆摊 sheet) or accept a downloaded CSV at `data/sheet.csv`. Apply the vocabulary and date heuristic. Proposed series merges, proposed aliases, and unresolved date or status rows appear on `/import` until accepted or edited. Import leaves `polling_enabled` off on every convention, including maker-fair rows such as San José Made. The owner turns polling on. Re-running import is idempotent: match on a stored sheet-row key, do not duplicate conventions.
 
 Done when a fresh database import reproduces Fanime as one series with two editions, SacAnime as one series, Comiket as one series, and Zenkaikon sitting in the review queue. Unit tests cover the heuristic table, including the three examples in this doc.
 
@@ -522,15 +513,15 @@ Do not poll URLs during import.
 
 Tables and `resolveInboxItem` / `upsertInboxItem`. `/inbox` with unread styling, snooze, and the buttons in the approval table. A developer-only way to insert a sample item of each kind (a button on the inbox empty state is enough) so the loop can be tested without Gmail.
 
-Done when: saving a sample open date sets a confirmed `application_start` and does not change cycle; "I submitted" moves the card to Applied; "Apply this result" moves it to Accepted or Rejected; Dismiss changes nothing; marking read leaves it pending. Unit tests cover each resolution.
+Done when: saving a sample open date sets a confirmed `application_start_date` and does not change status; "I submitted" moves the card to Applied; "Apply this result" moves it to Accepted or Rejected; Dismiss changes nothing; marking read leaves it pending. Unit tests cover each resolution.
 
-`resolveInboxItem` calls `syncApplicationStart(edition)` after it confirms an open date. In this milestone that function is a no-op. M5 fills in the Calendar call. Do not import Google here.
+`resolveInboxItem` calls `syncEditionCalendar(edition)` after it confirms an open date. Saving an edition calls it too. In this milestone that function is a no-op. M5 fills in the Calendar call. Do not import Google here.
 
 Do not call Google, Discord, or the network.
 
 ### M5 — Google Calendar
 
-OAuth as specified. Settings page shows connected email or the disconnected state. Replace the M4 no-op `syncApplicationStart` so approving an `opening_date` item creates the all-day event and stores the id on the edition. Approving a new date for the same edition patches it. Disconnect leaves local data in place and stops Calendar calls.
+OAuth as specified. Settings page shows connected email or the disconnected state. Replace the M4 no-op `syncEditionCalendar` so saving a `start_date` and approving an `opening_date` item each create or patch their all-day event and store the id on the edition. A corrected date patches that event. Disconnect leaves local data in place and stops Calendar calls.
 
 Done when the flow works against a real test user if credentials are present, and when they are absent the rest of the app still runs and Settings explains how to connect. Calendar calls sit behind `src/google` so tests can use a fake.
 
@@ -576,7 +567,7 @@ No self-bot. No listening to every channel in a guild.
 
 ### M11 — Discovery
 
-Weekly AnimeCons US fetch for this year and next year, name matching, seed drive times, `/discover` with the two lists, Track and Ignore. Track creates edition plus tracking application plus an `html` watch when a site URL exists.
+Weekly AnimeCons US fetch for this year and next year, name matching, seed drive times, `/discover` with the two lists, Track and Ignore. Track creates an edition with intent `tracking`, plus an `html` watch when a site URL exists.
 
 Done when a fixture schedule containing Fanime (already in the db) and a brand-new Bay Area con produces one "new edition" suggestion and one new candidate under Within a day, and a New York con lands under Farther. Ignore stays ignored on the next run.
 
