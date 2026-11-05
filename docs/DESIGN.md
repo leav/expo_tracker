@@ -16,7 +16,7 @@ Local, single-user app for artist-alley applications.
 | --- | --- | --- |
 | M0 | done | This design document. |
 | M1 | done | Scaffold the local app, SQLite, and an empty shell. |
-| M2 | not started | Manual series and editions. |
+| M2 | done | Manual series and editions. |
 | M3 | not started | Import the Google Sheet, with a review queue. |
 | M4 | not started | Inbox and human approval. Seed items by hand. |
 | M5 | not started | Google account connection and Calendar projection. |
@@ -500,6 +500,8 @@ Done when you can add FanimeCon, a 2027 edition, an application start of 2026-11
 Domain writes go through `src/domain`. Cover status and intent changes with unit tests.
 
 Do not import the sheet. Do not add inbox items yet.
+
+2026-11-04: Convention, alias, and edition tables, with writes in `src/domain`. `/` is the board; `/series/[id]` edits the series, aliases, and editions. Both routes set `instant = false` so Cache Components does not block them. Checked in the browser: added FanimeCon, added cycle 2027 with application start 2026-11-08 (status `not_open`, Tracking), then Skip moved it to Pass with intent `skip`. That FanimeCon row is already in the local database. Next agent: no import and no inbox.
 
 ### M3 — Sheet import
 
