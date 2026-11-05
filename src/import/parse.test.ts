@@ -17,8 +17,7 @@ describe("sheet date heuristic and status map", () => {
     assert.equal(row.identityKey, "fanimecon");
     assert.equal(row.displayName, "FanimeCon");
     assert.equal(row.cycleLabel, "2027");
-    assert.equal(row.intent, "tracking");
-    assert.equal(row.status, "not_open");
+    assert.equal(row.status, "waiting_to_apply");
     assert.deepEqual(row.dates, {
       kind: "application_window",
       applicationStartDate: "2026-11-08",
@@ -36,12 +35,11 @@ describe("sheet date heuristic and status map", () => {
     );
     assert.equal(row.identityKey, "sacanime");
     assert.equal(row.cycleLabel, "2026-summer");
-    assert.equal(row.intent, "applying");
     assert.equal(row.status, "rejected");
     assert.deepEqual(row.dates, {
       kind: "submitted",
       submittedAt: "2026-06-05",
-      resultAt: "2026-06-17",
+      resultDate: "2026-06-17",
     });
     assert.equal(row.reviewReason, null);
   });
@@ -52,7 +50,6 @@ describe("sheet date heuristic and status map", () => {
       "2026-11-04",
     );
     assert.equal(row.reviewReason, "ended_window");
-    assert.equal(row.intent, "tracking");
     assert.equal(row.status, "unknown");
     assert.deepEqual(row.dates, {
       kind: "ended_window",
@@ -71,10 +68,9 @@ describe("sheet date heuristic and status map", () => {
     );
     assert.equal(rows[0].identityKey, "sjmadewinterwondermarket");
     assert.equal(rows[0].displayName, "SJ Made Winter Wonder Market");
-    assert.equal(rows[0].status, "accepted");
+    assert.equal(rows[0].status, "approved");
     assert.equal(rows[0].reviewReason, "unresolved_date");
     assert.equal(rows[1].status, "passed");
-    assert.equal(rows[1].intent, "skip");
     assert.equal(rows[1].reviewReason, null);
     assert.equal(rows[1].attendance, 1000);
   });
@@ -89,7 +85,7 @@ describe("sheet date heuristic and status map", () => {
     assert.equal(row.identityKey, "castlepoint");
     assert.deepEqual(row.aliasCandidates, ["cpac"]);
     assert.equal(row.status, "submitted");
-    assert.deepEqual(row.dates, { kind: "submitted", submittedAt: null, resultAt: "2026-12-11" });
+    assert.deepEqual(row.dates, { kind: "submitted", submittedAt: null, resultDate: "2026-12-11" });
     assert.equal(row.links.some((link) => link.kind === "google_form"), true);
     assert.equal(row.links.some((link) => link.kind === "discord"), true);
   });

@@ -1,99 +1,74 @@
-export const intents = ["tracking", "applying", "skip"] as const;
 export const statuses = [
   "unknown",
-  "not_open",
+  "waiting_to_apply",
   "open",
   "submitted",
   "waitlisted",
-  "accepted",
+  "approved",
   "attended",
   "rejected",
   "withdrawn",
   "passed",
 ] as const;
 
-export type Intent = (typeof intents)[number];
 export type Status = (typeof statuses)[number];
 
-export const boardColumns = [
-  "Tracking",
-  "Applied",
-  "Waitlist",
-  "Accepted",
-  "Attended",
-  "Rejected",
-  "Pass",
-] as const;
+export const statusLabels: Record<Status, string> = {
+  unknown: "Unknown",
+  waiting_to_apply: "Waiting to apply",
+  open: "Ready to apply",
+  submitted: "Submitted",
+  waitlisted: "Waitlisted",
+  approved: "Approved",
+  attended: "Attended",
+  rejected: "Rejected",
+  withdrawn: "Withdrawn",
+  passed: "Passed",
+};
 
-export type BoardColumn = (typeof boardColumns)[number];
-
-const trackingStatuses = new Set<Status>(["unknown", "not_open", "open"]);
-const applyingStatuses = new Set<Status>([
+export const lineupStatuses = [
+  "waiting_to_apply",
+  "open",
   "submitted",
   "waitlisted",
-  "accepted",
+  "approved",
+] as const satisfies readonly Status[];
+
+const lineupStatusSet = new Set<Status>(lineupStatuses);
+const paidStatusSet = new Set<Status>(["approved", "attended"]);
+const decisionStatusSet = new Set<Status>([
+  "submitted",
+  "waitlisted",
+  "approved",
   "attended",
   "rejected",
-  "withdrawn",
 ]);
-
-export function isIntent(value: string): value is Intent {
-  return (intents as readonly string[]).includes(value);
-}
 
 export function isStatus(value: string): value is Status {
   return (statuses as readonly string[]).includes(value);
 }
 
-export function resolveEditionState(intent: Intent, status: Status): {
-  intent: Intent;
-  status: Status;
-} {
-  if (status === "passed" || intent === "skip") {
-    return { intent: "skip", status: "passed" };
-  }
-  if (trackingStatuses.has(status)) {
-    return { intent: "tracking", status };
-  }
-  if (applyingStatuses.has(status)) {
-    return { intent: "applying", status };
-  }
-  return { intent, status };
+export function isLineupStatus(status: Status): boolean {
+  return lineupStatusSet.has(status);
 }
 
-export function boardPlacement(
-  intent: Intent,
-  status: Status,
-): { column: BoardColumn | null; openBadge: boolean } {
-  const resolved = resolveEditionState(intent, status);
-  if (resolved.status === "withdrawn") return { column: null, openBadge: false };
-  if (resolved.status === "passed") return { column: "Pass", openBadge: false };
-  if (resolved.status === "unknown" && resolved.intent !== "tracking") {
-    return { column: null, openBadge: false };
-  }
-  switch (resolved.status) {
-    case "unknown":
-    case "not_open":
-      return { column: "Tracking", openBadge: false };
-    case "open":
-      return { column: "Tracking", openBadge: true };
-    case "submitted":
-      return { column: "Applied", openBadge: false };
-    case "waitlisted":
-      return { column: "Waitlist", openBadge: false };
-    case "accepted":
-      return { column: "Accepted", openBadge: false };
-    case "attended":
-      return { column: "Attended", openBadge: false };
-    case "rejected":
-      return { column: "Rejected", openBadge: false };
-    default:
-      return { column: null, openBadge: false };
-  }
+export function isPaidStatus(status: Status): boolean {
+  return paidStatusSet.has(status);
+}
+
+export function isDecisionStatus(status: Status): boolean {
+  return decisionStatusSet.has(status);
+}
+
+export function normalizeLegacyStatus(value: string | null | undefined): Status | null {
+  if (!value) return null;
+  if (value === "accepted") return "approved";
+  if (value === "not_open") return "waiting_to_apply";
+  return isStatus(value) ? value : null;
 }
 
 export function initialStatus(applicationStartDate: string | null, today: string): Status {
-  if (applicationStartDate && applicationStartDate > today) return "not_open";
+  if (applicationStartDate && applicationStartDate > today) return "waiting_to_apply";
   return "unknown";
 }
 

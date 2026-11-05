@@ -3,13 +3,7 @@ import {
   identityFromName,
   seriesDisplayName,
 } from "../domain/names";
-import {
-  initialStatus,
-  resolveEditionState,
-  todayInLosAngeles,
-  type Intent,
-  type Status,
-} from "../domain/status";
+import { initialStatus, isDecisionStatus, todayInLosAngeles, type Status } from "../domain/status";
 import { parseCsv } from "./csv";
 
 export const sheetHeaders = [
@@ -28,7 +22,7 @@ export const sheetHeaders = [
 export type LinkKind = "discord" | "gmail" | "google_form" | "eventeny" | "eventhub" | "other";
 
 export type DateInterpretation =
-  | { kind: "submitted"; submittedAt: string | null; resultAt: string | null }
+  | { kind: "submitted"; submittedAt: string | null; resultDate: string | null }
   | {
       kind: "application_window";
       applicationStartDate: string | null;
@@ -58,23 +52,20 @@ export type ParsedSheetRow = {
   links: { url: string; kind: LinkKind }[];
   notes: string | null;
   sheetStatus: string;
-  intent: Intent | null;
   status: Status | null;
   dates: DateInterpretation;
   reviewReason: "ended_window" | "unresolved_date" | "unknown_status" | null;
 };
 
-const statusMap: Record<string, { intent: Intent; status: Status; ended?: boolean }> = {
-  留意中: { intent: "tracking", status: "unknown" },
-  已申请: { intent: "applying", status: "submitted" },
-  Waitlist: { intent: "applying", status: "waitlisted" },
-  已通过: { intent: "applying", status: "accepted" },
-  已拒绝: { intent: "applying", status: "rejected" },
-  Pass: { intent: "skip", status: "passed" },
-  申请已结束: { intent: "tracking", status: "unknown", ended: true },
+const statusMap: Record<string, { status: Status; ended?: boolean }> = {
+  留意中: { status: "unknown" },
+  已申请: { status: "submitted" },
+  Waitlist: { status: "waitlisted" },
+  已通过: { status: "approved" },
+  已拒绝: { status: "rejected" },
+  Pass: { status: "passed" },
+  申请已结束: { status: "unknown", ended: true },
 };
-
-const applyingStatuses = new Set<Status>(["submitted", "waitlisted", "accepted", "attended", "rejected"]);
 
 export function parseSheet(csv: string, today = todayInLosAngeles()): ParsedSheetRow[] {
   const table = parseCsv(csv);
@@ -109,17 +100,10 @@ export function parseSheet(csv: string, today = todayInLosAngeles()): ParsedShee
       mapped,
     });
 
-    let intent = mapped?.intent ?? null;
     let status = mapped?.status ?? null;
     if (mapped && sheetStatus === "留意中") {
       const openDate = dates.kind === "application_window" ? dates.applicationStartDate : null;
       status = initialStatus(openDate, today);
-      intent = "tracking";
-    }
-    if (intent && status) {
-      const resolved = resolveEditionState(intent, status);
-      intent = resolved.intent;
-      status = resolved.status;
     }
 
     const reviewReason = !mapped
@@ -146,7 +130,6 @@ export function parseSheet(csv: string, today = todayInLosAngeles()): ParsedShee
       links: parseLinks(cell(cells, index["其他连接"])),
       notes,
       sheetStatus,
-      intent,
       status,
       dates,
       reviewReason,
@@ -160,13 +143,13 @@ function interpretDates(input: {
   resultDate: string | null;
   rawApplyDate: string;
   notes: string | null;
-  mapped: { intent: Intent; status: Status; ended?: boolean } | null;
+  mapped: { status: Status; ended?: boolean } | null;
 }): DateInterpretation {
   const { applyDate, resultDate, rawApplyDate, notes, mapped } = input;
-  if (mapped && resultDate && applyingStatuses.has(mapped.status)) {
-    return { kind: "submitted", submittedAt: applyDate, resultAt: resultDate };
+  if (mapped && resultDate && isDecisionStatus(mapped.status)) {
+    return { kind: "submitted", submittedAt: applyDate, resultDate };
   }
-  if (mapped && mapped.status !== "passed" && mapped.intent === "tracking" && !mapped.ended && applyDate) {
+  if (mapped && mapped.status !== "passed" && !mapped.ended && !isDecisionStatus(mapped.status) && applyDate) {
     return {
       kind: "application_window",
       applicationStartDate: applyDate,
@@ -293,7 +276,7 @@ export function editionDatesFromInterpretation(dates: DateInterpretation): {
   applicationStartDate: string | null;
   applicationEndDate: string | null;
   submittedAt: string | null;
-  resultAt: string | null;
+  resultDate: string | null;
 } {
   switch (dates.kind) {
     case "submitted":
@@ -301,7 +284,7 @@ export function editionDatesFromInterpretation(dates: DateInterpretation): {
         applicationStartDate: null,
         applicationEndDate: null,
         submittedAt: dates.submittedAt,
-        resultAt: dates.resultAt,
+        resultDate: dates.resultDate,
       };
     case "application_window":
     case "ended_window":
@@ -309,14 +292,14 @@ export function editionDatesFromInterpretation(dates: DateInterpretation): {
         applicationStartDate: dates.applicationStartDate,
         applicationEndDate: dates.applicationEndDate,
         submittedAt: null,
-        resultAt: null,
+        resultDate: null,
       };
     default:
       return {
         applicationStartDate: null,
         applicationEndDate: null,
         submittedAt: null,
-        resultAt: null,
+        resultDate: null,
       };
   }
 }

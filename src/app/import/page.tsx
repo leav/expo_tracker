@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   acceptAliasAction,
   acceptMergeAction,
@@ -9,6 +8,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { openDatabase } from "../../db";
 import { listPendingProposals, type AliasPayload, type MergePayload, type UnresolvedPayload } from "../../import/apply";
+import { isDecisionStatus, normalizeLegacyStatus } from "../../domain/status";
 import { editionDatesFromInterpretation } from "../../import/parse";
 
 export const instant = false;
@@ -26,12 +26,6 @@ export default async function ImportPage({
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
-      <nav className="flex gap-4 text-sm">
-        <Link className="underline-offset-4 hover:underline" href="/">
-          Board
-        </Link>
-        <span className="text-muted-foreground">Import</span>
-      </nav>
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Import</h1>
@@ -50,7 +44,7 @@ export default async function ImportPage({
 
       {pending.length === 0 ? (
         <p className="text-muted-foreground">
-          Nothing to review. Import the 摆摊 sheet, or everything from the last import already landed on the board.
+          Nothing to review. Import the 摆摊 sheet, or everything from the last import already landed.
         </p>
       ) : null}
 
@@ -92,12 +86,13 @@ export default async function ImportPage({
           {unresolved.map((item) => {
             const { row } = item.payload as UnresolvedPayload;
             const dates = editionDatesFromInterpretation(row.dates);
+            const status = normalizeLegacyStatus(row.status);
             const defaultField =
               row.reviewReason === "ended_window"
                 ? "application_start"
-                : row.status === "passed"
+                : status === "passed"
                   ? "ignore"
-                  : row.intent === "applying"
+                  : status && isDecisionStatus(status)
                     ? "submitted_at"
                     : "application_start";
             return (
@@ -134,9 +129,8 @@ export default async function ImportPage({
                     <Field label="Application start" name="applicationStartDate" type="date" defaultValue={dates.applicationStartDate ?? row.applyDate ?? ""} />
                     <Field label="Application end" name="applicationEndDate" type="date" defaultValue={dates.applicationEndDate ?? ""} />
                     <Field label="Submitted" name="submittedAt" type="date" defaultValue={dates.submittedAt ?? ""} />
-                    <Field label="Result" name="resultAt" type="date" defaultValue={dates.resultAt ?? row.resultDate ?? ""} />
-                    <Field label="Intent" name="intent" defaultValue={row.intent ?? "tracking"} />
-                    <Field label="Status" name="status" defaultValue={row.status ?? "unknown"} />
+                    <Field label="Result" name="resultDate" type="date" defaultValue={dates.resultDate ?? row.resultDate ?? ""} />
+                    <Field label="Status" name="status" defaultValue={status ?? "unknown"} />
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button type="submit">Accept row</Button>

@@ -1,17 +1,14 @@
 import { asc, eq } from "drizzle-orm";
 import { aliases, conventions, editions } from "../db/schema";
+import { conventionInterest } from "./cons";
+import { compareCycleLabels } from "./cycles";
 import type { DomainResult, TrackerDb } from "./db";
-import { blankToNull, isError, parseAttendance, parseDate } from "./fields";
+import { blankToNull, isError, parseDate } from "./fields";
 import {
-  boardColumns,
-  boardPlacement,
   initialStatus,
-  isIntent,
+  isPaidStatus,
   isStatus,
-  resolveEditionState,
   todayInLosAngeles,
-  type BoardColumn,
-  type Intent,
   type Status,
 } from "./status";
 
@@ -22,18 +19,13 @@ export type EditionInput = {
   endDate: string | null;
   applicationStartDate: string | null;
   applicationEndDate: string | null;
-  venue: string | null;
   city: string | null;
   region: string | null;
-  country: string | null;
-  attendance: number | null;
-  intent: Intent;
   status: Status;
   submittedAt: string | null;
-  resultAt: string | null;
+  resultDate: string | null;
   paid: boolean;
   notes: string | null;
-  applicationConfirmed?: boolean;
   sheetRowKey?: string | null;
   inferInitialStatus?: boolean;
 };
@@ -52,17 +44,13 @@ export function editionInputFromForm(form: FormData, conventionId: number): Edit
   if (isError(applicationEndDate)) return applicationEndDate;
   const submittedAt = parseDate(blankToNull(form.get("submittedAt")), "Submitted");
   if (isError(submittedAt)) return submittedAt;
-  const resultAt = parseDate(blankToNull(form.get("resultAt")), "Result");
-  if (isError(resultAt)) return resultAt;
-  const attendance = parseAttendance(blankToNull(form.get("attendance")));
-  if (isError(attendance)) return attendance;
+  const resultDate = parseDate(blankToNull(form.get("resultDate")), "Result");
+  if (isError(resultDate)) return resultDate;
 
-  const intentValue = blankToNull(form.get("intent")) ?? "tracking";
   const statusValue = blankToNull(form.get("status")) ?? "unknown";
-  if (!isIntent(intentValue) || !isStatus(statusValue)) {
+  if (!isStatus(statusValue)) {
     return { error: "Choose a status from the list." };
   }
-  const resolved = resolveEditionState(intentValue, statusValue);
 
   return {
     conventionId,
@@ -71,60 +59,70 @@ export function editionInputFromForm(form: FormData, conventionId: number): Edit
     endDate,
     applicationStartDate,
     applicationEndDate,
-    venue: blankToNull(form.get("venue")),
     city: blankToNull(form.get("city")),
     region: blankToNull(form.get("region")),
-    country: blankToNull(form.get("country")),
-    attendance,
-    intent: resolved.intent,
-    status: resolved.status,
+    status: statusValue,
     submittedAt,
-    resultAt,
+    resultDate,
     paid: form.get("paid") === "on",
     notes: blankToNull(form.get("notes")),
   };
 }
 
+function locationFromConvention(
+  db: TrackerDb,
+  conventionId: number,
+  input: EditionInput,
+): DomainResult<EditionInput> {
+  const convention = db.select().from(conventions).where(eq(conventions.id, conventionId)).get();
+  if (!convention) return { ok: false, error: "That convention is gone." };
+  return {
+    ok: true,
+    value: {
+      ...input,
+      city: input.city ?? convention.defaultCity,
+      region: input.region ?? convention.defaultRegion,
+    },
+  };
+}
+
 export function createEdition(db: TrackerDb, input: EditionInput): DomainResult<{ id: number }> {
+  const withLocation = locationFromConvention(db, input.conventionId, input);
+  if (!withLocation.ok) return withLocation;
+  const values = withLocation.value;
+
   const duplicate = db
     .select({ cycleLabel: editions.cycleLabel })
     .from(editions)
-    .where(eq(editions.conventionId, input.conventionId))
+    .where(eq(editions.conventionId, values.conventionId))
     .all()
-    .some((row) => row.cycleLabel === input.cycleLabel);
-  if (duplicate) return { ok: false, error: `Cycle ${input.cycleLabel} is already on this convention.` };
+    .some((row) => row.cycleLabel === values.cycleLabel);
+  if (duplicate) return { ok: false, error: `Cycle ${values.cycleLabel} is already on this convention.` };
 
   const status =
-    input.inferInitialStatus === false
-      ? input.status
-      : input.status === "unknown"
-        ? initialStatus(input.applicationStartDate, todayInLosAngeles())
-        : input.status;
-  const resolved = resolveEditionState(input.intent, status);
-  const applicationConfirmed =
-    input.applicationConfirmed ?? input.applicationStartDate !== null;
+    values.inferInitialStatus === false
+      ? values.status
+      : values.status === "unknown"
+        ? initialStatus(values.applicationStartDate, todayInLosAngeles())
+        : values.status;
+
   const inserted = db
     .insert(editions)
     .values({
-      conventionId: input.conventionId,
-      cycleLabel: input.cycleLabel,
-      startDate: input.startDate,
-      endDate: input.endDate,
-      applicationStartDate: input.applicationStartDate,
-      applicationEndDate: input.applicationEndDate,
-      venue: input.venue,
-      city: input.city,
-      region: input.region,
-      country: input.country,
-      attendance: input.attendance,
-      submittedAt: input.submittedAt,
-      resultAt: input.resultAt,
-      notes: input.notes,
-      intent: resolved.intent,
-      status: resolved.status,
-      applicationConfirmed,
-      paid: resolved.status === "accepted" || resolved.status === "attended" ? input.paid : false,
-      sheetRowKey: input.sheetRowKey ?? null,
+      conventionId: values.conventionId,
+      cycleLabel: values.cycleLabel,
+      startDate: values.startDate,
+      endDate: values.endDate,
+      applicationStartDate: values.applicationStartDate,
+      applicationEndDate: values.applicationEndDate,
+      city: values.city,
+      region: values.region,
+      submittedAt: values.submittedAt,
+      resultDate: values.resultDate,
+      notes: values.notes,
+      status,
+      paid: isPaidStatus(status) ? values.paid : false,
+      sheetRowKey: values.sheetRowKey ?? null,
     })
     .returning({ id: editions.id })
     .get();
@@ -148,8 +146,7 @@ export function updateEdition(
     .find((row) => row.id !== editionId && row.cycleLabel === input.cycleLabel);
   if (duplicate) return { ok: false, error: `Cycle ${input.cycleLabel} is already on this convention.` };
 
-  const resolved = resolveEditionState(input.intent, input.status);
-  const paid = resolved.status === "accepted" || resolved.status === "attended" ? input.paid : current.paid;
+  const paid = isPaidStatus(input.status) ? input.paid : current.paid;
   db.update(editions)
     .set({
       cycleLabel: input.cycleLabel,
@@ -157,17 +154,12 @@ export function updateEdition(
       endDate: input.endDate,
       applicationStartDate: input.applicationStartDate,
       applicationEndDate: input.applicationEndDate,
-      venue: input.venue,
       city: input.city,
       region: input.region,
-      country: input.country,
-      attendance: input.attendance,
       submittedAt: input.submittedAt,
-      resultAt: input.resultAt,
+      resultDate: input.resultDate,
       notes: input.notes,
-      intent: resolved.intent,
-      status: resolved.status,
-      applicationConfirmed: input.applicationConfirmed ?? input.applicationStartDate !== null,
+      status: input.status,
       paid,
     })
     .where(eq(editions.id, editionId))
@@ -178,80 +170,18 @@ export function updateEdition(
 export function markEditionPassed(db: TrackerDb, editionId: number): DomainResult<{ id: number }> {
   const current = db.select().from(editions).where(eq(editions.id, editionId)).get();
   if (!current) return { ok: false, error: "That edition is gone." };
-  const resolved = resolveEditionState("skip", "passed");
-  db.update(editions)
-    .set({ intent: resolved.intent, status: resolved.status })
-    .where(eq(editions.id, editionId))
-    .run();
+  db.update(editions).set({ status: "passed" }).where(eq(editions.id, editionId)).run();
   return { ok: true, value: { id: editionId } };
 }
 
 export function setEditionPaid(db: TrackerDb, editionId: number, paid: boolean): DomainResult<{ id: number }> {
   const current = db.select().from(editions).where(eq(editions.id, editionId)).get();
   if (!current) return { ok: false, error: "That edition is gone." };
-  if (current.status !== "accepted" && current.status !== "attended") {
-    return { ok: false, error: "Paid is for an accepted edition." };
+  if (!isStatus(current.status) || !isPaidStatus(current.status)) {
+    return { ok: false, error: "Paid is for an approved edition." };
   }
   db.update(editions).set({ paid }).where(eq(editions.id, editionId)).run();
   return { ok: true, value: { id: editionId } };
-}
-
-export type BoardCard = {
-  editionId: number;
-  conventionId: number;
-  conventionName: string;
-  cycleLabel: string;
-  applicationStartDate: string | null;
-  city: string | null;
-  openBadge: boolean;
-  paid: boolean;
-  status: Status;
-};
-
-export function listBoard(db: TrackerDb): { columns: { name: BoardColumn; cards: BoardCard[] }[]; withdrawn: BoardCard[] } {
-  const rows = db
-    .select({
-      editionId: editions.id,
-      conventionId: editions.conventionId,
-      conventionName: conventions.displayName,
-      cycleLabel: editions.cycleLabel,
-      applicationStartDate: editions.applicationStartDate,
-      city: editions.city,
-      intent: editions.intent,
-      status: editions.status,
-      paid: editions.paid,
-    })
-    .from(editions)
-    .innerJoin(conventions, eq(editions.conventionId, conventions.id))
-    .all();
-
-  const columns = boardColumns.map((name) => ({ name, cards: [] as BoardCard[] }));
-  const withdrawn: BoardCard[] = [];
-  for (const row of rows) {
-    if (!isIntent(row.intent) || !isStatus(row.status)) continue;
-    const placement = boardPlacement(row.intent, row.status);
-    const card: BoardCard = {
-      editionId: row.editionId,
-      conventionId: row.conventionId,
-      conventionName: row.conventionName,
-      cycleLabel: row.cycleLabel,
-      applicationStartDate: row.applicationStartDate,
-      city: row.city,
-      openBadge: placement.openBadge,
-      paid: row.paid,
-      status: row.status,
-    };
-    if (row.status === "withdrawn" || placement.column === null) {
-      withdrawn.push(card);
-      continue;
-    }
-    columns.find((column) => column.name === placement.column)?.cards.push(card);
-  }
-  for (const column of columns) {
-    column.cards.sort((a, b) => a.conventionName.localeCompare(b.conventionName) || compareCycleLabels(a.cycleLabel, b.cycleLabel));
-  }
-  withdrawn.sort((a, b) => compareCycleLabels(a.cycleLabel, b.cycleLabel));
-  return { columns, withdrawn };
 }
 
 export function getSeries(db: TrackerDb, conventionId: number) {
@@ -269,12 +199,15 @@ export function getSeries(db: TrackerDb, conventionId: number) {
     .where(eq(editions.conventionId, conventionId))
     .all()
     .sort((a, b) => compareCycleLabels(a.cycleLabel, b.cycleLabel));
-  return { convention, aliases: aliasRows, editions: editionRows };
+  return {
+    convention,
+    aliases: aliasRows,
+    editions: editionRows,
+    interest: conventionInterest(convention.manualInterest, editionRows),
+  };
 }
 
-export function compareCycleLabels(a: string, b: string): number {
-  return a.localeCompare(b, "en", { numeric: true });
-}
+export { compareCycleLabels };
 
 function fillIfEmpty<T>(current: T, incoming: T): T {
   if (current === null || current === undefined || current === "") return incoming;
@@ -295,7 +228,6 @@ export function importEdition(db: TrackerDb, input: EditionInput & { sheetRowKey
     return createEdition(db, {
       ...input,
       paid: false,
-      applicationConfirmed: false,
       inferInitialStatus: false,
     });
   }
@@ -308,12 +240,9 @@ export function importEdition(db: TrackerDb, input: EditionInput & { sheetRowKey
       applicationStartDate: fillIfEmpty(existing.applicationStartDate, input.applicationStartDate),
       applicationEndDate: fillIfEmpty(existing.applicationEndDate, input.applicationEndDate),
       city: fillIfEmpty(existing.city, input.city),
-      venue: fillIfEmpty(existing.venue, input.venue),
       region: fillIfEmpty(existing.region, input.region),
-      country: fillIfEmpty(existing.country, input.country),
-      attendance: fillIfEmpty(existing.attendance, input.attendance),
       submittedAt: fillIfEmpty(existing.submittedAt, input.submittedAt),
-      resultAt: fillIfEmpty(existing.resultAt, input.resultAt),
+      resultDate: fillIfEmpty(existing.resultDate, input.resultDate),
       notes: fillIfEmpty(existing.notes, input.notes),
     })
     .where(eq(editions.id, existing.id))

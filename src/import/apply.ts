@@ -1,11 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { conventions, editionLinks, editions, importProposals } from "../db/schema";
 import { addAlias } from "../domain/aliases";
-import { createConvention, findNameMatch } from "../domain/conventions";
+import { createConvention, fillConventionFromImport, findNameMatch } from "../domain/conventions";
 import type { DomainResult, TrackerDb } from "../domain/db";
 import { importEdition } from "../domain/editions";
 import { normalizeName } from "../domain/names";
-import type { Intent, Status } from "../domain/status";
+import { normalizeLegacyStatus, type Status } from "../domain/status";
 import {
   editionDatesFromInterpretation,
   type ParsedSheetRow,
@@ -94,6 +94,7 @@ export function applyParsedRows(db: TrackerDb, rows: ParsedSheetRow[]): ImportSu
         const written = writeRow(db, row, existing?.id ?? null);
         if (written.createdConvention) summary.conventionsCreated += 1;
         if (written.editionId) summary.editionsUpserted += 1;
+        if (written.conventionId) fillConventionFromImport(db, written.conventionId, group);
       }
     }
 
@@ -135,6 +136,7 @@ export function acceptMerge(db: TrackerDb, proposalId: number): DomainResult<{ c
   for (const row of payload.rows) {
     writeRow(db, row, conventionId.value);
   }
+  fillConventionFromImport(db, conventionId.value, payload.rows);
   markAccepted(db, proposalId);
   return { ok: true, value: { conventionId: conventionId.value } };
 }
@@ -159,20 +161,18 @@ export function acceptUnresolved(
     applicationStartDate?: string | null;
     applicationEndDate?: string | null;
     submittedAt?: string | null;
-    resultAt?: string | null;
+    resultDate?: string | null;
     status?: Status;
-    intent?: Intent;
   },
 ): DomainResult<{ editionId: number }> {
   const proposal = pending(db, proposalId, "unresolved");
   if (!proposal.ok) return proposal;
   const row = { ...(proposal.value.payload as UnresolvedPayload).row };
-  if (override?.intent) row.intent = override.intent;
-  if (override?.status) row.status = override.status;
+  row.status = override?.status ?? normalizeLegacyStatus(row.status);
   if (override?.applicationStartDate !== undefined || override?.dateField) {
     row.dates = applyDateOverride(row, override);
   }
-  if (!row.intent || !row.status) {
+  if (!row.status) {
     return { ok: false, error: "This row still needs a status." };
   }
   const written = writeRow(db, row, findNameMatch(db, row.identityKey)?.id ?? null);
@@ -197,7 +197,7 @@ function applyDateOverride(
     applicationStartDate?: string | null;
     applicationEndDate?: string | null;
     submittedAt?: string | null;
-    resultAt?: string | null;
+    resultDate?: string | null;
   },
 ): ParsedSheetRow["dates"] {
   if (override.dateField === "ignore") return { kind: "none" };
@@ -205,7 +205,7 @@ function applyDateOverride(
     return {
       kind: "submitted",
       submittedAt: override.submittedAt ?? row.applyDate,
-      resultAt: override.resultAt ?? row.resultDate,
+      resultDate: override.resultDate ?? row.resultDate,
     };
   }
   if (override.dateField === "application_start") {
@@ -223,7 +223,8 @@ function writeRow(
   row: ParsedSheetRow,
   conventionId: number | null,
 ): { conventionId: number | null; editionId: number | null; createdConvention: boolean } {
-  if (!row.intent || !row.status) {
+  const status = normalizeLegacyStatus(row.status);
+  if (!status) {
     return { conventionId, editionId: null, createdConvention: false };
   }
   let createdConvention = false;
@@ -249,18 +250,13 @@ function writeRow(
     endDate: null,
     applicationStartDate: dates.applicationStartDate,
     applicationEndDate: dates.applicationEndDate,
-    venue: null,
     city: row.city,
     region: null,
-    country: null,
-    attendance: row.attendance,
-    intent: row.intent,
-    status: row.status,
+    status,
     submittedAt: dates.submittedAt,
-    resultAt: dates.resultAt,
+    resultDate: dates.resultDate,
     paid: false,
     notes: row.notes,
-    applicationConfirmed: false,
     inferInitialStatus: false,
     sheetRowKey: row.sheetRowKey,
   });
@@ -291,10 +287,6 @@ function ensureConvention(
   if (existing) return { ok: true, value: existing.id };
   const created = createConvention(db, { displayName, website, notes: null });
   if (!created.ok) return created;
-  const stored = db.select().from(conventions).where(eq(conventions.id, created.value.id)).get();
-  if (stored && stored.pollingEnabled) {
-    db.update(conventions).set({ pollingEnabled: false }).where(eq(conventions.id, created.value.id)).run();
-  }
   return { ok: true, value: created.value.id };
 }
 

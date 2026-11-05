@@ -23,7 +23,8 @@ Rules for every milestone:
 | M1 | done | Scaffold the local app, SQLite, and an empty shell. |
 | M2 | done | Manual series and editions. |
 | M3 | done | Import the Google Sheet, with a review queue. |
-| M4 | not started | Core workspace: Cons, Lineups, shared defaults, and single-status migration. |
+| M4 | done | Core workspace: Cons, Lineups, shared defaults, and single-status migration. |
+| M4.1 | done | Location is city and state only. |
 | M5 | not started | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
 | M7 | not started | Manually started Gmail scan jobs. |
@@ -200,8 +201,7 @@ The stable series. For example, FanimeCon 2026 and FanimeCon 2027 belong to one 
 | --- | --- |
 | id, display_name, normalized | Display name is preserved. `normalized` is its match key. |
 | website | Stable site, not a one-year form URL. |
-| default_venue, default_address | Reusable venue and street address for new editions. |
-| default_city, default_region, default_postal_code, default_country | Reusable location fields. |
+| default_city, default_region | Reusable city and state for new editions. The UI labels `default_region` as State. |
 | estimated_attendance | One convention-level expected crowd size. Null when unknown. Import strips commas and a trailing plus: `27,500` is 27500, `1,000+` is 1000, `Unknown` is null. |
 | manual_interest | Signed integer, default `0`. |
 | drive_minutes | Cached estimated driving time from San Mateo. Null means unknown. |
@@ -286,7 +286,7 @@ One occurrence of a convention. Example cycle labels are `2027`, `2027-winter`, 
 | application_start_reminder_enabled | True only after the owner explicitly adds the application-start reminder. |
 | start_date_calendar_event_id | Google event id for `start_date`. Null until created. |
 | application_start_date_calendar_event_id | Google event id for `application_start_date`. Null until created. |
-| venue, address, city, region, postal_code, country | Historical location snapshot copied from convention defaults on creation, then independently editable. |
+| city, region | Historical city and state snapshot copied from convention defaults on creation, then independently editable. The UI labels `region` as State. |
 | status | See the status vocabulary. |
 | submitted_at, result_date | Dates. `result_date` is expected while Submitted/Waitlisted and actual after a decision. |
 | paid | The owner toggles this on an Approved or Attended edition. No job sets it. |
@@ -791,6 +791,28 @@ M1–M3 below are preserved as historical records of what was built, including t
 - Browser verification exercises Cons sorting, opens a con detail, creates an edition from defaults, overrides one snapshot field, and confirms its position in Lineups.
 
 **Out of scope:** Job persistence or execution, Google integration, Calendar API calls, and all network access.
+
+**Completion note — 2026-11-05:** Schema `0002` rebuilds convention/edition: single status (`approved` / `waiting_to_apply`), convention location defaults, estimated attendance, interest, drive minutes; editions keep location snapshots and `result_date`. Cons grid (`?sort=`), `/cons/[id]`, `/lineups`, Jobs/Settings placeholders, `/series/[id]` redirect, quieter Import. Browser: distance/time/name sorts, added M4 Verify Con, edition 2027 copied San Jose then city override Sacramento, Lineups dated at 2027-03-01 waiting to apply. Re-import did not duplicate FanimeCon/SacAnime/Comiket; ILLO MART stayed `approved`. Next agent: M4.1 city and state only. `listCons` seeds drive minutes from city when the cache is empty; leftover import queue may still have Comic Market.
+
+### M4.1 — City and state only
+
+**Deliverables**
+
+- Drop venue, street address, postal code, and country from convention defaults and edition location snapshots.
+- Keep `default_city` / `default_region` and edition `city` / `region`. Label region as State in the UI.
+- Migrate existing databases with schema `0003` without losing city or region values.
+- Prefill new editions from convention city and state only.
+- Browser-check the con detail forms and Cons/Lineups location labels.
+
+**Acceptance**
+
+- Convention and edition forms expose only city and state for location.
+- Creating an edition copies convention city and state; later convention edits do not change existing edition snapshots.
+- Migration removes the dropped columns while preserving city and region.
+
+**Out of scope:** Calendar, Jobs, discovery, and any other location enrichment.
+
+**Completion note — 2026-11-05:** Schema `0003` drops venue/address/postal/country from convention defaults and edition snapshots; keeps `default_city`/`default_region` and edition `city`/`region` (UI: State). Forms on `/` and `/cons/[id]` expose only city and state. Browser: created M41 City State Con (Oakland, CA), edition 2027 copied both, city override to Berkeley showed on Cons (`Berkeley, CA`) and Lineups (`Berkeley`). Next agent: M5 Calendar only.
 
 ### M5 — Manual Calendar reminders
 

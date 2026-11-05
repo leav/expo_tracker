@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "../db/schema";
 import { editions } from "../db/schema";
-import { createConvention } from "./conventions";
+import { createConvention, updateConvention } from "./conventions";
 import type { TrackerDb } from "./db";
 import { createEdition, markEditionPassed, setEditionPaid } from "./editions";
 import { initialStatus, todayInLosAngeles } from "./status";
@@ -26,11 +26,14 @@ describe("edition writes", () => {
     sqlite.close();
   });
 
-  it("creates a tracking edition and then marks it passed without setting paid", () => {
+  it("copies convention location into a new edition and infers waiting_to_apply", () => {
     const convention = createConvention(db, {
       displayName: "FanimeCon",
       website: null,
       notes: null,
+      defaultCity: "San Jose",
+      defaultRegion: "CA",
+      estimatedAttendance: 27500,
     });
     assert.equal(convention.ok, true);
     if (!convention.ok) return;
@@ -42,15 +45,11 @@ describe("edition writes", () => {
       endDate: null,
       applicationStartDate: "2026-11-08",
       applicationEndDate: null,
-      venue: null,
       city: null,
       region: null,
-      country: null,
-      attendance: null,
-      intent: "tracking",
       status: "unknown",
       submittedAt: null,
-      resultAt: null,
+      resultDate: null,
       paid: false,
       notes: null,
     });
@@ -58,18 +57,30 @@ describe("edition writes", () => {
     if (!created.ok) return;
 
     const stored = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
-    assert.equal(stored?.intent, "tracking");
     assert.equal(stored?.status, initialStatus("2026-11-08", todayInLosAngeles()));
-    assert.equal(stored?.applicationConfirmed, true);
+    assert.equal(stored?.city, "San Jose");
+    assert.equal(stored?.region, "CA");
     assert.equal(stored?.paid, false);
+    assert.equal("attendance" in (stored ?? {}), false);
+    assert.equal("intent" in (stored ?? {}), false);
+
+    const updated = updateConvention(db, {
+      id: convention.value.id,
+      displayName: "FanimeCon",
+      website: null,
+      notes: null,
+      defaultCity: "San Francisco",
+      defaultRegion: "CA",
+      estimatedAttendance: 27500,
+    });
+    assert.equal(updated.ok, true);
+    const afterConventionEdit = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
+    assert.equal(afterConventionEdit?.city, "San Jose");
 
     const skipped = markEditionPassed(db, created.value.id);
     assert.equal(skipped.ok, true);
     const passed = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
-    assert.equal(passed?.intent, "skip");
     assert.equal(passed?.status, "passed");
-    assert.equal(passed?.paid, false);
-
     const paid = setEditionPaid(db, created.value.id, true);
     assert.equal(paid.ok, false);
   });

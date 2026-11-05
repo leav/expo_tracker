@@ -15,6 +15,20 @@
       "when": 1793853071027,
       "tag": "0001_import_review",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793940000000,
+      "tag": "0002_core_workspace",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1793916582916,
+      "tag": "0003_city_state_only",
+      "breakpoints": true
     }
   ]
 }

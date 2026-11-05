@@ -25,6 +25,18 @@ export function parseAttendance(value: string | null): number | null | { error: 
   return Number(value);
 }
 
+export function parseSignedInteger(value: string | null, label: string): number | { error: string } {
+  if (value === null) return 0;
+  if (!/^-?\d+$/.test(value)) return { error: `${label} must be a whole number.` };
+  return Number(value);
+}
+
+export function parseOptionalMinutes(value: string | null, label: string): number | null | { error: string } {
+  if (value === null) return null;
+  if (!/^\d+$/.test(value)) return { error: `${label} must be a whole number of minutes.` };
+  return Number(value);
+}
+
 export function isError<T>(value: T | { error: string }): value is { error: string } {
   return typeof value === "object" && value !== null && "error" in value;
 }

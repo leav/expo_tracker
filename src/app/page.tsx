@@ -1,37 +1,56 @@
 import Link from "next/link";
-import { createConventionAction, markPassedAction, setPaidAction } from "./actions";
+import { connection } from "next/server";
+import { createConventionAction } from "./actions";
 import { Button } from "../components/ui/button";
+import { interestBackground, listCons, parseConsSort, type ConsSortKey } from "../domain/cons";
 import { countConventions } from "../domain/conventions";
-import { listBoard } from "../domain/editions";
+import { todayInLosAngeles } from "../domain/status";
 import { openDatabase } from "../db";
 
 export const instant = false;
 
+const sorts: { key: ConsSortKey; label: string }[] = [
+  { key: "interest", label: "Interest" },
+  { key: "distance", label: "Distance" },
+  { key: "time", label: "Time of year" },
+  { key: "name", label: "Name" },
+];
+
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; withdrawn?: string }>;
+  searchParams: Promise<{ error?: string; sort?: string }>;
 }) {
+  await connection();
   const params = await searchParams;
+  const sort = parseConsSort(params.sort);
   const db = openDatabase();
-  const board = listBoard(db);
+  const tiles = listCons(db, sort, todayInLosAngeles());
   const conventions = countConventions(db);
-  const showWithdrawn = params.withdrawn === "1";
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Artist-alley tracker</h1>
-          <p className="text-sm text-muted-foreground">Editions grouped by where the application stands.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Cons</h1>
+          <p className="text-sm text-muted-foreground">
+            One tile per convention. Color is interest; the score lives on the con page.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-4 text-sm">
-          <Link className="underline-offset-4 hover:underline" href="/import">
-            Import
-          </Link>
-          <Link className="underline-offset-4 hover:underline" href={showWithdrawn ? "/" : "/?withdrawn=1"}>
-            {showWithdrawn ? "Hide withdrawn" : "Show withdrawn"}
-          </Link>
+        <div className="flex flex-wrap gap-2 text-sm">
+          {sorts.map((item) => (
+            <Link
+              key={item.key}
+              href={item.key === "interest" ? "/" : `/?sort=${item.key}`}
+              className={
+                item.key === sort
+                  ? "rounded-md bg-foreground px-2 py-1 text-background"
+                  : "rounded-md border px-2 py-1 hover:bg-muted"
+              }
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
       </header>
 
@@ -45,70 +64,39 @@ export default async function Home({
         </p>
       ) : null}
 
-      <form action={createConventionAction} className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+      <form action={createConventionAction} className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] sm:items-end">
         <Field label="Convention" name="displayName" required placeholder="FanimeCon" />
         <Field label="Website" name="website" placeholder="https://" />
+        <Field label="City" name="defaultCity" placeholder="San Jose" />
+        <Field label="State" name="defaultRegion" placeholder="CA" />
         <Button type="submit">Add convention</Button>
       </form>
 
-      <div className="flex gap-3 overflow-x-auto pb-2">
-        {board.columns.map((column) => (
-          <section key={column.name} className="flex w-64 shrink-0 flex-col gap-2">
-            <h2 className="text-sm font-medium">
-              {column.name} <span className="text-muted-foreground">{column.cards.length}</span>
-            </h2>
-            {column.cards.map((card) => (
-              <article key={card.editionId} className="flex flex-col gap-2 rounded-lg border bg-card p-3">
-                <div>
-                  <Link href={`/series/${card.conventionId}`} className="font-medium hover:underline">
-                    {card.conventionName}
-                  </Link>
-                  <p className="text-sm text-muted-foreground">{card.cycleLabel}</p>
-                </div>
-                {card.applicationStartDate ? (
-                  <p className="text-sm">Applications open {card.applicationStartDate}</p>
-                ) : null}
-                {card.city ? <p className="text-sm text-muted-foreground">{card.city}</p> : null}
-                {card.openBadge ? (
-                  <span className="w-fit rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">Open</span>
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  {card.status !== "passed" ? (
-                    <form action={markPassedAction}>
-                      <input type="hidden" name="editionId" value={card.editionId} />
-                      <input type="hidden" name="returnTo" value="/" />
-                      <Button type="submit" variant="outline" size="sm">Skip</Button>
-                    </form>
-                  ) : null}
-                  {card.status === "accepted" || card.status === "attended" ? (
-                    <form action={setPaidAction}>
-                      <input type="hidden" name="editionId" value={card.editionId} />
-                      <input type="hidden" name="returnTo" value="/" />
-                      <input type="hidden" name="paid" value={card.paid ? "off" : "on"} />
-                      <Button type="submit" variant="outline" size="sm">{card.paid ? "Paid" : "Mark paid"}</Button>
-                    </form>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-          </section>
-        ))}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {tiles.map((tile) => {
+          const summary = [
+            tile.displayName,
+            tile.eventDate ?? "no event date",
+            tile.statusLabel ?? (tile.hasEditions ? "unknown status" : "no editions"),
+            tile.locationLabel ?? "no city",
+            `interest ${tile.interest}`,
+          ].join(", ");
+          return (
+            <Link
+              key={tile.conventionId}
+              href={`/cons/${tile.conventionId}`}
+              aria-label={summary}
+              className="flex flex-col gap-1 rounded-lg border p-3 hover:border-foreground/40"
+              style={{ backgroundColor: interestBackground(tile.interest) }}
+            >
+              <span className="font-medium">{tile.displayName}</span>
+              <span className="text-sm text-muted-foreground">{tile.eventDate ?? "No event date"}</span>
+              <span className="text-sm">{tile.hasEditions ? tile.statusLabel ?? "Unknown" : "No editions"}</span>
+              <span className="text-sm text-muted-foreground">{tile.locationLabel ?? "City unknown"}</span>
+            </Link>
+          );
+        })}
       </div>
-
-      {showWithdrawn ? (
-        <section className="grid gap-2">
-          <h2 className="text-sm font-medium">Withdrawn</h2>
-          {board.withdrawn.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nothing withdrawn.</p>
-          ) : (
-            board.withdrawn.map((card) => (
-              <Link key={card.editionId} href={`/series/${card.conventionId}`} className="text-sm hover:underline">
-                {card.conventionName} {card.cycleLabel}
-              </Link>
-            ))
-          )}
-        </section>
-      ) : null}
     </main>
   );
 }

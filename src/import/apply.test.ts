@@ -48,7 +48,7 @@ describe("sheet import apply", () => {
     assert.equal(first.aliasesProposed, 1);
 
     const magwest = db.select().from(conventions).where(eq(conventions.normalized, "magwest")).get();
-    assert.equal(magwest?.pollingEnabled, false);
+    assert.equal(magwest?.estimatedAttendance, 1000);
     const magwestEdition = db.select().from(editions).where(eq(editions.conventionId, magwest?.id ?? 0)).get();
     assert.equal(magwestEdition?.status, "passed");
 
@@ -67,7 +67,8 @@ describe("sheet import apply", () => {
     const sacanime = db.select().from(conventions).where(eq(conventions.normalized, "sacanime")).get();
     const comicMarket = db.select().from(conventions).where(eq(conventions.normalized, "comicmarket")).get();
     assert.equal(fanime?.displayName, "FanimeCon");
-    assert.equal(fanime?.pollingEnabled, false);
+    assert.equal(fanime?.estimatedAttendance, 27500);
+    assert.equal(fanime?.defaultCity, "San Jose");
     assert.equal(sacanime?.displayName, "SacAnime");
     assert.equal(comicMarket?.displayName, "Comic Market");
 
@@ -75,8 +76,7 @@ describe("sheet import apply", () => {
     assert.equal(fanimeEditions.length, 2);
     const fanime27 = fanimeEditions.find((row) => row.cycleLabel === "2027");
     assert.equal(fanime27?.applicationStartDate, "2026-11-08");
-    assert.equal(fanime27?.applicationConfirmed, false);
-    assert.equal(fanime27?.intent, "tracking");
+    assert.equal(fanime27?.status, "waiting_to_apply");
     assert.equal(fanime27?.startDateCalendarEventId, null);
 
     const sacanimeEditions = db.select().from(editions).where(eq(editions.conventionId, sacanime?.id ?? 0)).all();
@@ -89,9 +89,14 @@ describe("sheet import apply", () => {
     const acceptedAlias = acceptAlias(db, alias.id);
     assert.equal(acceptedAlias.ok, true);
 
+    db.update(conventions).set({ estimatedAttendance: 1 }).where(eq(conventions.id, fanime?.id ?? 0)).run();
     const again = applyParsedRows(db, rows);
     assert.equal(db.select().from(conventions).where(eq(conventions.normalized, "fanimecon")).all().length, 1);
     assert.equal(db.select().from(editions).where(eq(editions.conventionId, fanime?.id ?? 0)).all().length, 2);
+    assert.equal(
+      db.select().from(conventions).where(eq(conventions.normalized, "fanimecon")).get()?.estimatedAttendance,
+      1,
+    );
     assert.equal(
       listPendingProposals(db).some((item) => item.kind === "unresolved" && item.dedupeKey === "unresolved:Zenkaikon"),
       true,

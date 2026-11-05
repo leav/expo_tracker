@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import type { DomainResult } from "../../domain/db";
 import { blankToNull, parseDate, isError } from "../../domain/fields";
-import { isIntent, isStatus } from "../../domain/status";
+import { isStatus } from "../../domain/status";
 import { openDatabase } from "../../db";
 import { acceptAlias, acceptMerge, acceptUnresolved, applyParsedRows, dismissProposal } from "../../import/apply";
 import { loadSheetCsv } from "../../import/load";
@@ -44,9 +44,8 @@ export async function acceptUnresolvedAction(form: FormData) {
   if (isError(applicationEndDate)) fail({ ok: false, error: applicationEndDate.error });
   const submittedAt = parseDate(blankToNull(form.get("submittedAt")), "Submitted");
   if (isError(submittedAt)) fail({ ok: false, error: submittedAt.error });
-  const resultAt = parseDate(blankToNull(form.get("resultAt")), "Result");
-  if (isError(resultAt)) fail({ ok: false, error: resultAt.error });
-  const intentValue = blankToNull(form.get("intent"));
+  const resultDate = parseDate(blankToNull(form.get("resultDate")), "Result");
+  if (isError(resultDate)) fail({ ok: false, error: resultDate.error });
   const statusValue = blankToNull(form.get("status"));
   const dateField = blankToNull(form.get("dateField"));
 
@@ -58,8 +57,7 @@ export async function acceptUnresolvedAction(form: FormData) {
     applicationStartDate,
     applicationEndDate,
     submittedAt,
-    resultAt,
-    intent: intentValue && isIntent(intentValue) ? intentValue : undefined,
+    resultDate,
     status: statusValue && isStatus(statusValue) ? statusValue : undefined,
   });
   if (!result.ok) fail(result);
