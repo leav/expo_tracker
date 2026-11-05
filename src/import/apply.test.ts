@@ -65,11 +65,11 @@ describe("sheet import apply", () => {
 
     const fanime = db.select().from(conventions).where(eq(conventions.normalized, "fanimecon")).get();
     const sacanime = db.select().from(conventions).where(eq(conventions.normalized, "sacanime")).get();
-    const comiket = db.select().from(conventions).where(eq(conventions.normalized, "comiket")).get();
+    const comicMarket = db.select().from(conventions).where(eq(conventions.normalized, "comicmarket")).get();
     assert.equal(fanime?.displayName, "FanimeCon");
     assert.equal(fanime?.pollingEnabled, false);
     assert.equal(sacanime?.displayName, "SacAnime");
-    assert.equal(comiket?.displayName, "Comiket");
+    assert.equal(comicMarket?.displayName, "Comic Market");
 
     const fanimeEditions = db.select().from(editions).where(eq(editions.conventionId, fanime?.id ?? 0)).all();
     assert.equal(fanimeEditions.length, 2);
@@ -81,8 +81,8 @@ describe("sheet import apply", () => {
 
     const sacanimeEditions = db.select().from(editions).where(eq(editions.conventionId, sacanime?.id ?? 0)).all();
     assert.equal(sacanimeEditions.length, 2);
-    const comiketEditions = db.select().from(editions).where(eq(editions.conventionId, comiket?.id ?? 0)).all();
-    assert.equal(comiketEditions.length, 2);
+    const comicMarketEditions = db.select().from(editions).where(eq(editions.conventionId, comicMarket?.id ?? 0)).all();
+    assert.equal(comicMarketEditions.length, 2);
 
     const alias = listPendingProposals(db).find((item) => item.kind === "alias");
     assert.ok(alias);

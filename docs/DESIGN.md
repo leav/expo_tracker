@@ -229,8 +229,8 @@ To match an incoming name, normalize it and look for that key on conventions and
 Year and season variants are not aliases:
 
 - `FanimeCon 26` and `FanimeCon 27` are one series under the edition identity rules.
-- `cpac` → Castlepoint, `ALA` → Animé Los Angeles, and `Comic Market` → Comiket are aliases.
-- Comiket cycle numbers remain on the edition.
+- `cpac` → Castlepoint, `ALA` → Animé Los Angeles, and `Comic Market` → Comiket are aliases. Those aliases are confirmed by the owner; the name function does not hard-code them.
+- Trailing cycle numbers such as Comiket `109` remain on the edition.
 
 ### Edition
 
@@ -266,9 +266,10 @@ One occurrence of a convention. Example cycle labels are `2027`, `2027-winter`, 
 
 #### Edition identity
 
-- Strip a trailing year (`2027`, `27`, `26`) and a season word (`Summer`, `Winter`, `Spring`, `Fall`).
-- `Comic Market 108` and `Comiket 109` are convention Comiket, cycle `108` or `109`.
+- Strip a trailing year (`2027`, `27`, `26`), a season word (`Summer`, `Winter`, `Spring`, `Fall`), or another trailing cycle number (`108`, `109`).
+- `Comic Market 108` and `Comic Market 109` are one series, cycles `108` and `109`. `Comiket 109` is a different series until the owner adds `Comic Market` as an alias.
 - SacAnime Summer and SacAnime Winter are one convention, cycles `2026-summer` and `2027-winter`.
+- SJ Made events at different times of year are separate series. `SJ Made Winter Wonder Market` and `SJMade Fest` do not merge. `Winter Wonder Market 2026` and `Winter Wonder Market 2027` are editions of the same series.
 
 ### Watch
 
@@ -370,7 +371,7 @@ Examples:
 - FanimeCon 27, 留意中, 11/08/2026, note 限时申请 → `application_start_date` 2026-11-08, unconfirmed, intent tracking.
 - SacAnime Summer 26, 已拒绝, 申请日期 6/5/2026, 申请结果 6/17/2026 → submitted 2026-06-05, result 2026-06-17, status rejected.
 - Zenkaikon, 申请已结束, date 2026-09-12, note `AA申请 9/12 - 9/20` → propose open 2026-09-12 and close 2026-09-20 in the review queue.
-- SJ Made Winter Wonder Market, 已通过 → status accepted. Same for other San José Made markets, under one convention "San José Made".
+- SJ Made Winter Wonder Market, 已通过 → status accepted. SJ Made Fest is a different series. Yearly repeats of the same named market are editions.
 
 ### Import merge rules
 
@@ -378,7 +379,7 @@ The importer must propose these series merges instead of applying them silently:
 
 - FanimeCon 26 with FanimeCon 27;
 - SacAnime Summer with SacAnime Winter; and
-- Comic Market 108 with Comiket 109.
+- Comic Market 108 with Comic Market 109.
 
 These names already collapse under the edition identity rules, so confirmation does not insert an alias. If a name remains different after normalization, such as `cpac` for Castlepoint, propose it as an alias and insert it only after owner confirmation.
 

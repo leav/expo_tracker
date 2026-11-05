@@ -23,9 +23,9 @@ describe("alias and edition names", () => {
     assert.equal(normalizeName("..."), "");
   });
 
-  it("splits Comiket numbers and season cycles off the series key", () => {
+  it("splits trailing years, seasons, and cycle numbers off the series key", () => {
     assert.deepEqual(identityFromName("Comic Market 108"), {
-      key: "comiket",
+      key: "comicmarket",
       cycleLabel: "108",
       aliasCandidates: [],
     });
@@ -34,6 +34,7 @@ describe("alias and edition names", () => {
       cycleLabel: "109",
       aliasCandidates: [],
     });
+    assert.notEqual(normalizeName("Comic Market 108"), normalizeName("Comiket 109"));
     assert.deepEqual(identityFromName("SacAnime Summer"), {
       key: "sacanime",
       cycleLabel: "summer",
@@ -51,9 +52,22 @@ describe("alias and edition names", () => {
     });
   });
 
-  it("groups San José Made markets and parenthetical aliases", () => {
-    assert.equal(normalizeName("SJ Made Winter Wonder Market"), "sanjosemade");
-    assert.equal(identityFromName("SJ Made Winter Wonder Market").cycleLabel, "winter");
+  it("keeps differently timed SJ Made events as separate series", () => {
+    assert.equal(normalizeName("SJ Made Winter Wonder Market"), "sjmadewinterwondermarket");
+    assert.equal(normalizeName("SJMade Fest"), "sjmadefest");
+    assert.notEqual(normalizeName("SJMade Fest"), normalizeName("SJMade Winter Wonder"));
+    assert.equal(
+      normalizeName("SJ Made Winter Wonder Market 2026"),
+      normalizeName("SJ Made Winter Wonder Market 2027"),
+    );
+    assert.deepEqual(identityFromName("SJ Made Winter Wonder Market 2026"), {
+      key: "sjmadewinterwondermarket",
+      cycleLabel: "2026",
+      aliasCandidates: [],
+    });
+  });
+
+  it("extracts a parenthetical alias", () => {
     assert.deepEqual(identityFromName("castlepoint (cpac)"), {
       key: "castlepoint",
       cycleLabel: null,

@@ -61,7 +61,7 @@ describe("sheet date heuristic and status map", () => {
     });
   });
 
-  it("leaves a dated Pass row unresolved and maps SJ Made under one series", () => {
+  it("leaves a dated accepted row unresolved and keeps SJ Made events as their own series", () => {
     const rows = parseSheet(
       csv([
         "SJ Made Winter Wonder Market,San Jose,12/12/2026,7/20/2026,,已通过,Unknown,,,",
@@ -69,8 +69,8 @@ describe("sheet date heuristic and status map", () => {
       ]),
       "2026-11-04",
     );
-    assert.equal(rows[0].identityKey, "sanjosemade");
-    assert.equal(rows[0].displayName, "San José Made");
+    assert.equal(rows[0].identityKey, "sjmadewinterwondermarket");
+    assert.equal(rows[0].displayName, "SJ Made Winter Wonder Market");
     assert.equal(rows[0].status, "accepted");
     assert.equal(rows[0].reviewReason, "unresolved_date");
     assert.equal(rows[1].status, "passed");

@@ -12,24 +12,16 @@ export function normalizeName(raw: string): string {
 
 export function identityFromName(raw: string): NameIdentity {
   const peeled = peelName(raw);
-  const special = specialIdentity(peeled.base);
-  if (special) {
-    return { ...special, aliasCandidates: peeled.aliasCandidates };
-  }
-
   const affixes = takeYearAndSeason(peeled.base);
   const key = compactKey(affixes.base) || compactKey(peeled.base);
   return {
     key,
-    cycleLabel: formatCycle(affixes.year, affixes.season),
+    cycleLabel: formatCycle(affixes.year, affixes.season, affixes.number),
     aliasCandidates: peeled.aliasCandidates,
   };
 }
 
 export function seriesDisplayName(raw: string): string {
-  const identity = identityFromName(raw);
-  if (identity.key === "comiket") return "Comiket";
-  if (identity.key === "sanjosemade") return "San José Made";
   const peeled = peelName(raw);
   const affixes = takeYearAndSeason(peeled.base);
   return affixes.base.trim() || peeled.base.trim() || raw.trim();
@@ -57,35 +49,16 @@ export function peelName(raw: string): { base: string; aliasCandidates: string[]
   return { base: base || raw.trim(), aliasCandidates };
 }
 
-function specialIdentity(base: string): { key: string; cycleLabel: string | null } | null {
-  const comiket = base.match(/^(?:comic\s*market|comiket)(?:\s+(\d+))?$/i);
-  if (comiket) {
-    return { key: "comiket", cycleLabel: comiket[1] ?? null };
-  }
-
-  const sjMade = base.match(/^(?:san\s*jos[eé]\s*made|sj\s*made)\b(.*)$/i);
-  if (sjMade) {
-    const rest = sjMade[1].trim();
-    const affixes = takeYearAndSeason(rest);
-    let season = affixes.season;
-    if (!season) {
-      const inner = rest.match(/\b(summer|winter|spring|fall)\b/i);
-      if (inner) season = inner[1].toLowerCase();
-    }
-    const leftover = affixes.base.replace(/\b(summer|winter|spring|fall)\b/gi, "").replace(/\s+/g, " ").trim();
-    return {
-      key: "sanjosemade",
-      cycleLabel: formatCycle(affixes.year, season) ?? (leftover ? compactKey(leftover) : null),
-    };
-  }
-
-  return null;
-}
-
-function takeYearAndSeason(value: string): { base: string; year: string | null; season: string | null } {
+function takeYearAndSeason(value: string): {
+  base: string;
+  year: string | null;
+  season: string | null;
+  number: string | null;
+} {
   let current = value.trim();
   let year: string | null = null;
   let season: string | null = null;
+  let number: string | null = null;
   let changed = true;
   while (changed && current.length > 0) {
     changed = false;
@@ -96,14 +69,19 @@ function takeYearAndSeason(value: string): { base: string; year: string | null; 
       changed = true;
       continue;
     }
-    const yearMatch = current.match(/[\s-]+((?:19|20)\d{2}|\d{2})$/);
-    if (yearMatch && !year) {
-      year = expandYear(yearMatch[1]);
-      current = current.slice(0, -yearMatch[0].length).trim();
+    const numberMatch = current.match(/[\s-]+(\d+)$/);
+    if (numberMatch && !year && !number) {
+      const digits = numberMatch[1];
+      current = current.slice(0, -numberMatch[0].length).trim();
+      if (/^\d{2}$/.test(digits) || /^(?:19|20)\d{2}$/.test(digits)) {
+        year = expandYear(digits);
+      } else {
+        number = digits;
+      }
       changed = true;
     }
   }
-  return { base: current, year, season };
+  return { base: current, year, season, number };
 }
 
 function expandYear(value: string): string {
@@ -111,10 +89,11 @@ function expandYear(value: string): string {
   return value;
 }
 
-function formatCycle(year: string | null, season: string | null): string | null {
+function formatCycle(year: string | null, season: string | null, number: string | null): string | null {
   if (year && season) return `${year}-${season}`;
   if (year) return year;
   if (season) return season;
+  if (number) return number;
   return null;
 }
 
@@ -134,9 +113,15 @@ function stripTrailingYearAndSeason(value: string): string {
         changed = true;
       }
     }
-    const year = current.match(/^(.*?)((?:19|20)\d{2}|\d{2})$/);
-    if (year && year[1].length > 0) {
-      current = year[1];
+    const fourDigit = current.match(/^(.*?)((?:19|20)\d{2})$/);
+    if (fourDigit && fourDigit[1].length > 0) {
+      current = fourDigit[1];
+      changed = true;
+      continue;
+    }
+    const twoDigit = current.match(/^(.*[^\d])(\d{2})$/);
+    if (twoDigit && twoDigit[1].length > 0) {
+      current = twoDigit[1];
       changed = true;
     }
   }
