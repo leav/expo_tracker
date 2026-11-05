@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import {
   addAliasAction,
@@ -45,55 +46,66 @@ export default async function ConsDetailPage({
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">{query.error}</p>
       ) : null}
 
-      <form action={updateConventionAction} className="grid gap-3 rounded-lg border bg-card p-4">
-        <input type="hidden" name="conventionId" value={convention.id} />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Name" name="displayName" defaultValue={convention.displayName} required />
-          <Field label="Website" name="website" defaultValue={convention.website ?? ""} />
-          <Field label="Default city" name="defaultCity" defaultValue={convention.defaultCity ?? ""} />
-          <Field label="Default state" name="defaultRegion" defaultValue={convention.defaultRegion ?? ""} />
-          <Field
-            label="Estimated attendance"
-            name="estimatedAttendance"
-            defaultValue={convention.estimatedAttendance?.toString() ?? ""}
-          />
-          <Field label="Manual interest" name="manualInterest" defaultValue={convention.manualInterest.toString()} />
-          <Field
-            label="Manual drive minutes"
-            name="driveMinutes"
-            defaultValue={convention.driveSource === "manual" ? (convention.driveMinutes?.toString() ?? "") : ""}
-            placeholder={
-              convention.driveSource === "seed" && convention.driveMinutes != null
-                ? `Seeded ${convention.driveMinutes}`
-                : "City estimate"
-            }
-          />
-        </div>
-        <label className="grid gap-1 text-sm">
-          Notes
-          <textarea
-            name="notes"
-            defaultValue={convention.notes ?? ""}
-            rows={3}
-            className="rounded-md border border-input bg-background px-2 py-1"
-          />
-        </label>
-        <Button type="submit" className="w-fit">Save convention</Button>
-      </form>
-      <ConfirmForm
-        action={deleteConventionAction}
-        message="Delete this convention and all of its editions?"
-        className="w-fit"
-      >
-        <input type="hidden" name="conventionId" value={convention.id} />
-        <Button
-          type="submit"
-          variant="destructive"
-          className="bg-destructive text-white hover:bg-destructive/90"
+      <div className="grid gap-3 rounded-lg border bg-card p-4">
+        <form
+          id={`save-convention-${convention.id}`}
+          action={updateConventionAction}
+          className="grid gap-3"
         >
-          Delete convention
-        </Button>
-      </ConfirmForm>
+          <input type="hidden" name="conventionId" value={convention.id} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Name" name="displayName" defaultValue={convention.displayName} required />
+            <Field label="Website" name="website" defaultValue={convention.website ?? ""} />
+            <Field label="Default city" name="defaultCity" defaultValue={convention.defaultCity ?? ""} />
+            <Field label="Default state" name="defaultRegion" defaultValue={convention.defaultRegion ?? ""} />
+            <Field
+              label="Estimated attendance"
+              name="estimatedAttendance"
+              defaultValue={convention.estimatedAttendance?.toString() ?? ""}
+            />
+            <Field label="Manual interest" name="manualInterest" defaultValue={convention.manualInterest.toString()} />
+            <Field
+              label="Manual drive minutes"
+              name="driveMinutes"
+              defaultValue={convention.driveSource === "manual" ? (convention.driveMinutes?.toString() ?? "") : ""}
+              placeholder={
+                convention.driveSource === "seed" && convention.driveMinutes != null
+                  ? `Seeded ${convention.driveMinutes}`
+                  : "City estimate"
+              }
+            />
+          </div>
+          <label className="grid gap-1 text-sm">
+            Notes
+            <textarea
+              name="notes"
+              defaultValue={convention.notes ?? ""}
+              rows={3}
+              className="rounded-md border border-input bg-background px-2 py-1"
+            />
+          </label>
+        </form>
+        <div className="flex items-center justify-between">
+          <Button type="submit" form={`save-convention-${convention.id}`}>
+            Save convention
+          </Button>
+          <ConfirmForm
+            action={deleteConventionAction}
+            message="Delete this convention and all of its editions?"
+          >
+            <input type="hidden" name="conventionId" value={convention.id} />
+            <Button
+              type="submit"
+              size="icon"
+              variant="destructive"
+              className="bg-destructive text-white hover:bg-destructive/90"
+              aria-label="Delete convention"
+            >
+              <Trash2 />
+            </Button>
+          </ConfirmForm>
+        </div>
+      </div>
 
       <section className="grid gap-3">
         <h2 className="text-lg font-medium">Aliases</h2>
@@ -153,9 +165,10 @@ function EditionForm({
 }) {
   const status = isStatus(edition.status) ? edition.status : "unknown";
   const showPaid = isPaidStatus(status);
+  const saveFormId = `save-edition-${edition.id}`;
   return (
     <div className="grid gap-3 rounded-lg border bg-card p-4">
-      <form action={updateEditionAction} className="grid gap-3">
+      <form id={saveFormId} action={updateEditionAction} className="grid gap-3">
         <input type="hidden" name="conventionId" value={edition.conventionId} />
         <input type="hidden" name="editionId" value={edition.id} />
         <div className="grid gap-3 sm:grid-cols-2">
@@ -185,23 +198,25 @@ function EditionForm({
             Paid
           </label>
         ) : null}
-        <Button type="submit" className="w-fit">Save edition</Button>
       </form>
-      <ConfirmForm
-        action={deleteEditionAction}
-        message="Delete this edition?"
-        className="w-fit"
-      >
-        <input type="hidden" name="conventionId" value={edition.conventionId} />
-        <input type="hidden" name="editionId" value={edition.id} />
-        <Button
-          type="submit"
-          variant="destructive"
-          className="bg-destructive text-white hover:bg-destructive/90"
-        >
-          Delete edition
+      <div className="flex items-center justify-between">
+        <Button type="submit" form={saveFormId}>
+          Save edition
         </Button>
-      </ConfirmForm>
+        <ConfirmForm action={deleteEditionAction} message="Delete this edition?">
+          <input type="hidden" name="conventionId" value={edition.conventionId} />
+          <input type="hidden" name="editionId" value={edition.id} />
+          <Button
+            type="submit"
+            size="icon"
+            variant="destructive"
+            className="bg-destructive text-white hover:bg-destructive/90"
+            aria-label="Delete edition"
+          >
+            <Trash2 />
+          </Button>
+        </ConfirmForm>
+      </div>
     </div>
   );
 }
