@@ -13,7 +13,6 @@ import {
   createEdition,
   deleteEdition,
   editionInputFromForm,
-  markEditionPassed,
   setEditionPaid,
   updateEdition,
 } from "../domain/editions";
@@ -112,14 +111,6 @@ export async function deleteEditionAction(form: FormData) {
   const result = deleteEdition(openDatabase(), editionId);
   if (!result.ok) fail(`/cons/${conventionId}`, result);
   redirect(`/cons/${conventionId}`);
-}
-
-export async function markPassedAction(form: FormData) {
-  const editionId = Number(form.get("editionId"));
-  const result = markEditionPassed(openDatabase(), editionId);
-  const next = String(form.get("returnTo") ?? "/");
-  if (!result.ok) fail(next, result);
-  redirect(next);
 }
 
 export async function setPaidAction(form: FormData) {

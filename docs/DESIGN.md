@@ -26,6 +26,7 @@ Rules for every milestone:
 | M4 | done | Core workspace: Cons, Lineups, shared defaults, and single-status migration. |
 | M4.1 | done | Location is city and state only. |
 | M4.2 | done | Delete convention and delete edition. |
+| M4.3 | done | Skipped status; no dedicated Skip button. |
 | M5 | not started | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
 | M7 | not started | Manually started Gmail scan jobs. |
@@ -384,7 +385,7 @@ An edition has one lifecycle status. There is no separate intent field.
 | `attended`   | Attended         | Owner went. Set by hand. No job sets it.        | Excluded.                                   |
 | `rejected`   | Rejected         | Application was rejected.                       | Excluded.                                   |
 | `withdrawn`  | Withdrawn        | Owner backed out.                               | Excluded.                                   |
-| `passed`     | Passed           | Owner decided not to apply.                     | Excluded.                                   |
+| `skipped`    | Skipped          | Owner decided not to apply.                     | Excluded.                                   |
 
 Lineups contains `waiting_to_apply`, `open`, `submitted`, `waitlisted`, and `approved`. Dated rows sort by action date ascending, then convention name, then cycle label. Undated active rows appear afterward in **Needs dates**. An overdue Approved row remains until the owner marks it Attended or Withdrawn.
 
@@ -399,7 +400,7 @@ Map sheet statuses as follows:
 | Waitlist | `waitlisted` |
 | 已通过 | `approved` |
 | 已拒绝 | `rejected` |
-| Pass | `passed`. The note is stored in `notes`. |
+| Pass | `skipped`. The note is stored in `notes`. |
 | 申请已结束 | `unknown`. Do not guess that the owner missed it. The row stays in the review queue. |
 
 The sheet's `预计总人流` value maps to the convention's `estimated_attendance`, never to an edition. When several rows for one convention contain values, prefer the summarized edition's value, then the nearest other edition with a value using the same upcoming/recent/cycle ordering. Re-import fills this field only when it is null, so it does not overwrite an owner edit.
@@ -833,6 +834,24 @@ M1–M3 below are preserved as historical records of what was built, including t
 **Out of scope:** Calendar event cleanup on delete (M5 owns reminders and `calendar_sync`).
 
 **Completion note — 2026-11-05:** `deleteConvention` / `deleteEdition` in domain with cascade via existing FKs; red confirm buttons on `/cons/[id]`. Browser: created M42 Delete Con with 2026+2027, deleted 2026 (2027 remained and showed in Lineups), Skip set 2027 to passed without removing it, then Delete convention redirected to Cons with no M42 tile and no Lineups row. Next agent: M5 Calendar; deleting an edition or convention does not queue Calendar event deletion yet.
+
+### M4.3 — Skipped status, no Skip button
+
+**Deliverables**
+
+- Rename edition status `passed` to `skipped` (UI label Skipped). Migrate existing rows with schema `0004`.
+- Map sheet status `Pass` to `skipped`. Treat legacy stored `passed` as `skipped` in `normalizeLegacyStatus`.
+- Remove the dedicated Skip button and `markEditionPassed` path. Set Skipped from the edition status dropdown.
+
+**Acceptance**
+
+- Existing `passed` rows become `skipped` after migration.
+- The con detail page has no Skip button; saving status Skipped excludes the edition from Lineups.
+- Re-import still maps sheet `Pass` to `skipped`.
+
+**Out of scope:** Calendar, Jobs, and other status vocabulary changes.
+
+**Completion note — 2026-11-05:** Status `skipped` replaces `passed`; migration `0004` rewrites existing rows; Skip button removed. Browser: set an edition to Skipped via the dropdown, confirmed Cons label and Lineups exclusion; Delete still present. Next agent: M5 Calendar.
 
 ### M5 — Manual Calendar reminders
 

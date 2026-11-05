@@ -63,7 +63,7 @@ const statusMap: Record<string, { status: Status; ended?: boolean }> = {
   Waitlist: { status: "waitlisted" },
   已通过: { status: "approved" },
   已拒绝: { status: "rejected" },
-  Pass: { status: "passed" },
+  Pass: { status: "skipped" },
   申请已结束: { status: "unknown", ended: true },
 };
 
@@ -149,7 +149,7 @@ function interpretDates(input: {
   if (mapped && resultDate && isDecisionStatus(mapped.status)) {
     return { kind: "submitted", submittedAt: applyDate, resultDate };
   }
-  if (mapped && mapped.status !== "passed" && !mapped.ended && !isDecisionStatus(mapped.status) && applyDate) {
+  if (mapped && mapped.status !== "skipped" && !mapped.ended && !isDecisionStatus(mapped.status) && applyDate) {
     return {
       kind: "application_window",
       applicationStartDate: applyDate,

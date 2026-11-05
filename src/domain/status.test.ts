@@ -12,6 +12,7 @@ describe("edition status", () => {
   it("migrates legacy stored statuses", () => {
     assert.equal(normalizeLegacyStatus("accepted"), "approved");
     assert.equal(normalizeLegacyStatus("not_open"), "waiting_to_apply");
+    assert.equal(normalizeLegacyStatus("passed"), "skipped");
     assert.equal(normalizeLegacyStatus("submitted"), "submitted");
     assert.equal(normalizeLegacyStatus("nope"), null);
   });

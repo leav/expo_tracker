@@ -70,7 +70,7 @@ describe("sheet date heuristic and status map", () => {
     assert.equal(rows[0].displayName, "SJ Made Winter Wonder Market");
     assert.equal(rows[0].status, "approved");
     assert.equal(rows[0].reviewReason, "unresolved_date");
-    assert.equal(rows[1].status, "passed");
+    assert.equal(rows[1].status, "skipped");
     assert.equal(rows[1].reviewReason, null);
     assert.equal(rows[1].attendance, 1000);
   });

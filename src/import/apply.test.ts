@@ -50,7 +50,7 @@ describe("sheet import apply", () => {
     const magwest = db.select().from(conventions).where(eq(conventions.normalized, "magwest")).get();
     assert.equal(magwest?.estimatedAttendance, 1000);
     const magwestEdition = db.select().from(editions).where(eq(editions.conventionId, magwest?.id ?? 0)).get();
-    assert.equal(magwestEdition?.status, "passed");
+    assert.equal(magwestEdition?.status, "skipped");
 
     assert.equal(db.select().from(conventions).where(eq(conventions.normalized, "fanimecon")).get(), undefined);
     assert.equal(db.select().from(conventions).where(eq(conventions.normalized, "zenkaikon")).get(), undefined);

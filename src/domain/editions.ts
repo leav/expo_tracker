@@ -167,13 +167,6 @@ export function updateEdition(
   return { ok: true, value: { id: editionId } };
 }
 
-export function markEditionPassed(db: TrackerDb, editionId: number): DomainResult<{ id: number }> {
-  const current = db.select().from(editions).where(eq(editions.id, editionId)).get();
-  if (!current) return { ok: false, error: "That edition is gone." };
-  db.update(editions).set({ status: "passed" }).where(eq(editions.id, editionId)).run();
-  return { ok: true, value: { id: editionId } };
-}
-
 export function deleteEdition(db: TrackerDb, editionId: number): DomainResult<{ id: number }> {
   const current = db.select({ id: editions.id }).from(editions).where(eq(editions.id, editionId)).get();
   if (!current) return { ok: false, error: "That edition is gone." };

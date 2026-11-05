@@ -90,7 +90,7 @@ export default async function ImportPage({
             const defaultField =
               row.reviewReason === "ended_window"
                 ? "application_start"
-                : status === "passed"
+                : status === "skipped"
                   ? "ignore"
                   : status && isDecisionStatus(status)
                     ? "submitted_at"

@@ -4,7 +4,6 @@ import {
   createEditionAction,
   deleteConventionAction,
   deleteEditionAction,
-  markPassedAction,
   removeAliasAction,
   updateConventionAction,
   updateEditionAction,
@@ -31,7 +30,6 @@ export default async function ConsDetailPage({
   if (!Number.isInteger(conventionId)) notFound();
   const series = getSeries(openDatabase(), conventionId);
   if (!series) notFound();
-  const returnTo = `/cons/${series.convention.id}`;
   const convention = series.convention;
 
   return (
@@ -128,7 +126,7 @@ export default async function ConsDetailPage({
           <p className="text-sm text-muted-foreground">No editions yet. Add the first cycle below. Location defaults copy in.</p>
         ) : null}
         {series.editions.map((edition) => (
-          <EditionForm key={edition.id} edition={edition} returnTo={returnTo} />
+          <EditionForm key={edition.id} edition={edition} />
         ))}
         <form action={createEditionAction} className="grid gap-3 rounded-lg border border-dashed p-4">
           <h3 className="font-medium">Add edition</h3>
@@ -150,10 +148,8 @@ export default async function ConsDetailPage({
 
 function EditionForm({
   edition,
-  returnTo,
 }: {
   edition: typeof editions.$inferSelect;
-  returnTo: string;
 }) {
   const status = isStatus(edition.status) ? edition.status : "unknown";
   const showPaid = isPaidStatus(status);
@@ -191,15 +187,6 @@ function EditionForm({
         ) : null}
         <Button type="submit" className="w-fit">Save edition</Button>
       </form>
-      {status === "passed" ? (
-        <p className="text-sm text-muted-foreground">This edition is passed.</p>
-      ) : (
-        <form action={markPassedAction}>
-          <input type="hidden" name="editionId" value={edition.id} />
-          <input type="hidden" name="returnTo" value={returnTo} />
-          <Button type="submit" variant="outline">Skip</Button>
-        </form>
-      )}
       <ConfirmForm
         action={deleteEditionAction}
         message="Delete this edition?"

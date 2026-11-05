@@ -67,7 +67,7 @@ describe("lineups action dates", () => {
   });
 
   it("excludes unknown and terminal statuses from lineups", () => {
-    const excluded: Status[] = ["unknown", "attended", "rejected", "withdrawn", "passed"];
+    const excluded: Status[] = ["unknown", "attended", "rejected", "withdrawn", "skipped"];
     for (const status of excluded) {
       assert.equal(isLineupStatus(status), false);
     }

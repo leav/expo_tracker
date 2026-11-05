@@ -8,7 +8,7 @@ import * as schema from "../db/schema";
 import { editions } from "../db/schema";
 import { createConvention, updateConvention } from "./conventions";
 import type { TrackerDb } from "./db";
-import { createEdition, markEditionPassed, setEditionPaid } from "./editions";
+import { createEdition, setEditionPaid, updateEdition } from "./editions";
 import { initialStatus, todayInLosAngeles } from "./status";
 
 describe("edition writes", () => {
@@ -77,10 +77,24 @@ describe("edition writes", () => {
     const afterConventionEdit = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
     assert.equal(afterConventionEdit?.city, "San Jose");
 
-    const skipped = markEditionPassed(db, created.value.id);
+    const skipped = updateEdition(db, created.value.id, {
+      conventionId: convention.value.id,
+      cycleLabel: "2027",
+      startDate: null,
+      endDate: null,
+      applicationStartDate: "2026-11-08",
+      applicationEndDate: null,
+      city: "San Jose",
+      region: "CA",
+      status: "skipped",
+      submittedAt: null,
+      resultDate: null,
+      paid: false,
+      notes: null,
+    });
     assert.equal(skipped.ok, true);
-    const passed = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
-    assert.equal(passed?.status, "passed");
+    const storedSkipped = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
+    assert.equal(storedSkipped?.status, "skipped");
     const paid = setEditionPaid(db, created.value.id, true);
     assert.equal(paid.ok, false);
   });

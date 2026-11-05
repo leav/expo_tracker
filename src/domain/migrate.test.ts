@@ -141,3 +141,39 @@ describe("0003 city and state only migration", () => {
     assert.equal(editionColumns.includes("region"), true);
   });
 });
+
+describe("0004 skipped status migration", () => {
+  let sqlite: Database.Database;
+
+  before(() => {
+    sqlite = new Database(":memory:");
+    sqlite.exec(sqlFile("0000_powerful_lenny_balinger.sql"));
+    sqlite.exec(sqlFile("0001_import_review.sql"));
+    sqlite
+      .prepare(
+        "INSERT INTO convention (display_name, normalized, website, polling_enabled, notes) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run("Magwest", "magwest", null, 0, null);
+    sqlite
+      .prepare(
+        `INSERT INTO edition (
+          convention_id, cycle_label, start_date, city, attendance, intent, status, result_at, paid, notes, sheet_row_key
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(1, "2026", "2026-08-12", "SAN JOSE", null, "skip", "passed", null, 0, null, "Magwest 26");
+    sqlite.exec(sqlFile("0002_core_workspace.sql"));
+    sqlite.exec(sqlFile("0003_city_state_only.sql"));
+    sqlite.exec(sqlFile("0004_skipped_status.sql"));
+  });
+
+  after(() => {
+    sqlite.close();
+  });
+
+  it("renames passed statuses to skipped", () => {
+    const edition = sqlite.prepare("SELECT status FROM edition WHERE cycle_label = '2026'").get() as {
+      status: string;
+    };
+    assert.equal(edition.status, "skipped");
+  });
+});

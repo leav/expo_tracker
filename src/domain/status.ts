@@ -8,7 +8,7 @@ export const statuses = [
   "attended",
   "rejected",
   "withdrawn",
-  "passed",
+  "skipped",
 ] as const;
 
 export type Status = (typeof statuses)[number];
@@ -23,7 +23,7 @@ export const statusLabels: Record<Status, string> = {
   attended: "Attended",
   rejected: "Rejected",
   withdrawn: "Withdrawn",
-  passed: "Passed",
+  skipped: "Skipped",
 };
 
 export const lineupStatuses = [
@@ -64,6 +64,7 @@ export function normalizeLegacyStatus(value: string | null | undefined): Status 
   if (!value) return null;
   if (value === "accepted") return "approved";
   if (value === "not_open") return "waiting_to_apply";
+  if (value === "passed") return "skipped";
   return isStatus(value) ? value : null;
 }
 
