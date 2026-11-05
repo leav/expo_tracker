@@ -25,6 +25,7 @@ Rules for every milestone:
 | M3 | done | Import the Google Sheet, with a review queue. |
 | M4 | done | Core workspace: Cons, Lineups, shared defaults, and single-status migration. |
 | M4.1 | done | Location is city and state only. |
+| M4.2 | done | Delete convention and delete edition. |
 | M5 | not started | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
 | M7 | not started | Manually started Gmail scan jobs. |
@@ -813,6 +814,25 @@ M1–M3 below are preserved as historical records of what was built, including t
 **Out of scope:** Calendar, Jobs, discovery, and any other location enrichment.
 
 **Completion note — 2026-11-05:** Schema `0003` drops venue/address/postal/country from convention defaults and edition snapshots; keeps `default_city`/`default_region` and edition `city`/`region` (UI: State). Forms on `/` and `/cons/[id]` expose only city and state. Browser: created M41 City State Con (Oakland, CA), edition 2027 copied both, city override to Berkeley showed on Cons (`Berkeley, CA`) and Lineups (`Berkeley`). Next agent: M5 Calendar only.
+
+### M4.2 — Delete convention and edition
+
+**Deliverables**
+
+- Add domain deletes for a convention and for a single edition. Convention delete cascades aliases, editions, and edition links; edition delete cascades its links.
+- On `/cons/[id]`, show a red **Delete convention** button below Save convention and a red **Delete edition** button on each edition card. Confirm before submit.
+- Skip remains a status change to `passed` and does not remove the row.
+- Do not add delete controls on Cons tiles or Lineups.
+
+**Acceptance**
+
+- Deleting one edition leaves sibling editions and the convention.
+- Deleting a convention removes it from Cons and removes its editions from Lineups.
+- Skip still marks passed without deleting.
+
+**Out of scope:** Calendar event cleanup on delete (M5 owns reminders and `calendar_sync`).
+
+**Completion note — 2026-11-05:** `deleteConvention` / `deleteEdition` in domain with cascade via existing FKs; red confirm buttons on `/cons/[id]`. Browser: created M42 Delete Con with 2026+2027, deleted 2026 (2027 remained and showed in Lineups), Skip set 2027 to passed without removing it, then Delete convention redirected to Cons with no M42 tile and no Lineups row. Next agent: M5 Calendar; deleting an edition or convention does not queue Calendar event deletion yet.
 
 ### M5 — Manual Calendar reminders
 

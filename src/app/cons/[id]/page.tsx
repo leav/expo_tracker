@@ -2,11 +2,14 @@ import { notFound } from "next/navigation";
 import {
   addAliasAction,
   createEditionAction,
+  deleteConventionAction,
+  deleteEditionAction,
   markPassedAction,
   removeAliasAction,
   updateConventionAction,
   updateEditionAction,
 } from "../../actions";
+import { ConfirmForm } from "../../../components/confirm-form";
 import { Button } from "../../../components/ui/button";
 import { getSeries } from "../../../domain/editions";
 import { isPaidStatus, isStatus, statusLabels, statuses } from "../../../domain/status";
@@ -79,6 +82,20 @@ export default async function ConsDetailPage({
         </label>
         <Button type="submit" className="w-fit">Save convention</Button>
       </form>
+      <ConfirmForm
+        action={deleteConventionAction}
+        message="Delete this convention and all of its editions?"
+        className="w-fit"
+      >
+        <input type="hidden" name="conventionId" value={convention.id} />
+        <Button
+          type="submit"
+          variant="destructive"
+          className="bg-destructive text-white hover:bg-destructive/90"
+        >
+          Delete convention
+        </Button>
+      </ConfirmForm>
 
       <section className="grid gap-3">
         <h2 className="text-lg font-medium">Aliases</h2>
@@ -183,6 +200,21 @@ function EditionForm({
           <Button type="submit" variant="outline">Skip</Button>
         </form>
       )}
+      <ConfirmForm
+        action={deleteEditionAction}
+        message="Delete this edition?"
+        className="w-fit"
+      >
+        <input type="hidden" name="conventionId" value={edition.conventionId} />
+        <input type="hidden" name="editionId" value={edition.id} />
+        <Button
+          type="submit"
+          variant="destructive"
+          className="bg-destructive text-white hover:bg-destructive/90"
+        >
+          Delete edition
+        </Button>
+      </ConfirmForm>
     </div>
   );
 }

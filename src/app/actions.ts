@@ -2,10 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { addAlias, removeAlias } from "../domain/aliases";
-import { createConvention, updateConvention, type ConventionInput } from "../domain/conventions";
+import {
+  createConvention,
+  deleteConvention,
+  updateConvention,
+  type ConventionInput,
+} from "../domain/conventions";
 import type { DomainResult } from "../domain/db";
 import {
   createEdition,
+  deleteEdition,
   editionInputFromForm,
   markEditionPassed,
   setEditionPaid,
@@ -55,6 +61,13 @@ export async function updateConventionAction(form: FormData) {
   redirect(`/cons/${id}`);
 }
 
+export async function deleteConventionAction(form: FormData) {
+  const id = Number(form.get("conventionId"));
+  const result = deleteConvention(openDatabase(), id);
+  if (!result.ok) fail(`/cons/${id}`, result);
+  redirect("/");
+}
+
 export async function addAliasAction(form: FormData) {
   const conventionId = Number(form.get("conventionId"));
   const result = addAlias(openDatabase(), {
@@ -89,6 +102,14 @@ export async function updateEditionAction(form: FormData) {
   const input = editionInputFromForm(form, conventionId);
   if (isError(input)) fail(`/cons/${conventionId}`, { ok: false, error: input.error });
   const result = updateEdition(openDatabase(), editionId, input);
+  if (!result.ok) fail(`/cons/${conventionId}`, result);
+  redirect(`/cons/${conventionId}`);
+}
+
+export async function deleteEditionAction(form: FormData) {
+  const conventionId = Number(form.get("conventionId"));
+  const editionId = Number(form.get("editionId"));
+  const result = deleteEdition(openDatabase(), editionId);
   if (!result.ok) fail(`/cons/${conventionId}`, result);
   redirect(`/cons/${conventionId}`);
 }

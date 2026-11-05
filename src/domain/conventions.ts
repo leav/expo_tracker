@@ -98,6 +98,13 @@ export function updateConvention(
   return { ok: true, value: { id: updated.id } };
 }
 
+export function deleteConvention(db: TrackerDb, id: number): DomainResult<{ id: number }> {
+  const current = db.select({ id: conventions.id }).from(conventions).where(eq(conventions.id, id)).get();
+  if (!current) return { ok: false, error: "That convention is gone." };
+  db.delete(conventions).where(eq(conventions.id, id)).run();
+  return { ok: true, value: { id } };
+}
+
 export function countConventions(db: TrackerDb): number {
   return db.select({ id: conventions.id }).from(conventions).all().length;
 }
