@@ -46,6 +46,24 @@ export const editions = sqliteTable(
     resultAt: text("result_at"),
     paid: integer("paid", { mode: "boolean" }).notNull().default(false),
     notes: text("notes"),
+    sheetRowKey: text("sheet_row_key").unique(),
   },
   (table) => [unique("edition_convention_cycle").on(table.conventionId, table.cycleLabel)],
 );
+
+export const editionLinks = sqliteTable("edition_link", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  editionId: integer("edition_id")
+    .notNull()
+    .references(() => editions.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  kind: text("kind").notNull(),
+});
+
+export const importProposals = sqliteTable("import_proposal", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  kind: text("kind").notNull(),
+  dedupeKey: text("dedupe_key").notNull().unique(),
+  payloadJson: text("payload_json").notNull(),
+  state: text("state").notNull().default("pending"),
+});

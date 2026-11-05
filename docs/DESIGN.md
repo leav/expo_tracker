@@ -22,7 +22,7 @@ Rules for every milestone:
 | M0 | done | This design document. |
 | M1 | done | Scaffold the local app, SQLite, and an empty shell. |
 | M2 | done | Manual series and editions. |
-| M3 | not started | Import the Google Sheet, with a review queue. |
+| M3 | done | Import the Google Sheet, with a review queue. |
 | M4 | not started | Inbox and human approval. Seed items by hand. |
 | M5 | not started | Google account connection and Calendar projection. |
 | M6 | not started | Clock: reminders from approved dates. |
@@ -719,6 +719,8 @@ Complete exactly one milestone per session. Every milestone ends with the listed
 - Unit tests cover the heuristic table, including the three date examples in this document.
 
 **Out of scope:** Polling URLs during import.
+
+**Completion note — 2026-11-04:** Sheet parse and review live in `src/import`. `/import` fetches the public 摆摊 CSV (or `data/sheet.csv` if present). Identity merges stay queued until accepted and do not insert aliases. Fresh-db check in the browser: imported the sheet, accepted Fanime / SacAnime / Comiket merges, then confirmed one Fanime series with 2026 and 2027, one SacAnime, one Comiket, and Zenkaikon still in the unresolved queue (`AA申请 9/12 - 9/20`). Re-import did not duplicate those series. `polling_enabled` stayed off. Next agent: no inbox yet; leftover unresolved sheet rows are still on `/import`.
 
 ### M4 — Inbox and approval
 

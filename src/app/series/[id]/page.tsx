@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
-export const instant = false;
 import {
   addAliasAction,
   createEditionAction,
@@ -15,6 +13,8 @@ import { intents, statuses } from "../../../domain/status";
 import { getSeries } from "../../../domain/editions";
 import { openDatabase } from "../../../db";
 import type { editions } from "../../../db/schema";
+
+export const instant = false;
 
 export default async function SeriesPage({
   params,
@@ -33,7 +33,14 @@ export default async function SeriesPage({
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
-      <Link href="/" className="text-sm text-muted-foreground hover:underline">Board</Link>
+      <nav className="flex gap-4 text-sm">
+        <Link className="underline-offset-4 hover:underline" href="/">
+          Board
+        </Link>
+        <Link className="underline-offset-4 hover:underline" href="/import">
+          Import
+        </Link>
+      </nav>
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">{series.convention.displayName}</h1>
         <p className="text-sm text-muted-foreground">Aliases and editions, earliest cycle first.</p>

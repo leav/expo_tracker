@@ -67,6 +67,29 @@ export function countConventions(db: TrackerDb): number {
   return db.select({ id: conventions.id }).from(conventions).all().length;
 }
 
+export function findConventionByNormalized(db: TrackerDb, normalized: string) {
+  return db.select().from(conventions).where(eq(conventions.normalized, normalized)).get();
+}
+
+export function findNameMatch(
+  db: TrackerDb,
+  normalized: string,
+): { id: number; displayName: string } | null {
+  const convention = findConventionByNormalized(db, normalized);
+  if (convention) return { id: convention.id, displayName: convention.displayName };
+  const alias = db
+    .select({ id: conventions.id, displayName: conventions.displayName })
+    .from(aliases)
+    .innerJoin(conventions, eq(aliases.conventionId, conventions.id))
+    .where(eq(aliases.normalized, normalized))
+    .get();
+  return alias ?? null;
+}
+
+export function listConventions(db: TrackerDb) {
+  return db.select().from(conventions).all();
+}
+
 export function nameOwner(db: TrackerDb, normalized: string, exceptConventionId?: number): string | null {
   const convention = db
     .select({ id: conventions.id, displayName: conventions.displayName })

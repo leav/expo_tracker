@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { createConventionAction, markPassedAction, setPaidAction } from "./actions";
-
-export const instant = false;
 import { Button } from "../components/ui/button";
 import { countConventions } from "../domain/conventions";
 import { listBoard } from "../domain/editions";
 import { openDatabase } from "../db";
+
+export const instant = false;
 
 export default async function Home({
   searchParams,
@@ -25,12 +25,14 @@ export default async function Home({
           <h1 className="text-2xl font-semibold tracking-tight">Artist-alley tracker</h1>
           <p className="text-sm text-muted-foreground">Editions grouped by where the application stands.</p>
         </div>
-        <Link
-          className="text-sm underline-offset-4 hover:underline"
-          href={showWithdrawn ? "/" : "/?withdrawn=1"}
-        >
-          {showWithdrawn ? "Hide withdrawn" : "Show withdrawn"}
-        </Link>
+        <div className="flex flex-wrap gap-4 text-sm">
+          <Link className="underline-offset-4 hover:underline" href="/import">
+            Import
+          </Link>
+          <Link className="underline-offset-4 hover:underline" href={showWithdrawn ? "/" : "/?withdrawn=1"}>
+            {showWithdrawn ? "Hide withdrawn" : "Show withdrawn"}
+          </Link>
+        </div>
       </header>
 
       {params.error ? (
@@ -39,7 +41,7 @@ export default async function Home({
 
       {conventions === 0 ? (
         <p className="text-muted-foreground">
-          No conventions yet. Add one here, then give it an edition such as 2027.
+          No conventions yet. Import the 摆摊 sheet, or add one here and give it an edition such as 2027.
         </p>
       ) : null}
 

@@ -1,6 +1,6 @@
 # Agent handoff
 
-This repo is a local artist-alley vendor tracker. The product design is settled. M1 is done. Start at the first milestone marked `not started`.
+This repo is a local artist-alley vendor tracker. The product design is settled. Start at the first milestone marked `not started`.
 
 Read [docs/DESIGN.md](docs/DESIGN.md) before writing code. Use it in this order:
 

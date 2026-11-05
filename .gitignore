@@ -10,5 +10,6 @@ dist
 data/*.sqlite
 data/*.sqlite-*
 data/*.sqlite-journal
+data/sheet.csv
 agent-tools
 .DS_Store
