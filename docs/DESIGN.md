@@ -237,7 +237,7 @@ Cons supports four sorts. Convention name ascending is the final tie-breaker for
 - **Time:** summarized start month from January through December, ignoring year, with unknown values last.
 - **Name:** display name ascending.
 
-The grid tile uses interest as a color cue. Clamp the computed total to `-5…+5` for color only: `-5` is red, `0` is neutral, and `+5` is green. Do not show the number visibly in the grid. Include it in the tile's accessible name, and show the actual unclamped total on the con detail page.
+The grid tile uses interest as a color cue. Clamp the computed total to `-5…+5` for color only: `-5` is red, `0` is neutral, and `+5` is green. Do not show the number visibly in the grid. Include it in the tile's accessible name. On the con detail form, show the unclamped total as an equation with the editable manual interest input and grouped edition status counts (for example, `Interest Score: 2 = [2] + 1 attended - 1 skipped`).
 
 ### Alias
 

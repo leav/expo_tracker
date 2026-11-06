@@ -11,6 +11,7 @@ import {
 } from "../../actions";
 import { ConfirmForm } from "../../../components/confirm-form";
 import { Button } from "../../../components/ui/button";
+import { interestStatusCounts } from "../../../domain/cons";
 import { getSeries } from "../../../domain/editions";
 import { isPaidStatus, isStatus, statusLabels, statuses } from "../../../domain/status";
 import { openDatabase } from "../../../db";
@@ -32,14 +33,12 @@ export default async function ConsDetailPage({
   const series = getSeries(openDatabase(), conventionId);
   if (!series) notFound();
   const convention = series.convention;
+  const statusCounts = interestStatusCounts(series.editions);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">{convention.displayName}</h1>
-        <p className="text-sm text-muted-foreground">
-          Interest {series.interest} from manual {convention.manualInterest} plus edition statuses.
-        </p>
       </header>
       {query.error ? (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">{query.error}</p>
@@ -62,7 +61,6 @@ export default async function ConsDetailPage({
               name="estimatedAttendance"
               defaultValue={convention.estimatedAttendance?.toString() ?? ""}
             />
-            <Field label="Manual interest" name="manualInterest" defaultValue={convention.manualInterest.toString()} />
             <Field
               label="Manual drive minutes"
               name="driveMinutes"
@@ -73,6 +71,22 @@ export default async function ConsDetailPage({
                   : "City estimate"
               }
             />
+          </div>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <span>Interest Score: {series.interest} =</span>
+            <input
+              name="manualInterest"
+              type="text"
+              inputMode="numeric"
+              defaultValue={convention.manualInterest.toString()}
+              aria-label="Manual interest"
+              className="h-9 w-16 rounded-md border border-input bg-background px-2 text-center"
+            />
+            {statusCounts.map((item) => (
+              <span key={item.status}>
+                {item.contribution > 0 ? "+" : "-"} {item.count} {item.label}
+              </span>
+            ))}
           </div>
           <label className="grid gap-1 text-sm">
             Notes

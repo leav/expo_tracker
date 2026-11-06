@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   clampInterestForColor,
   conventionInterest,
+  interestStatusCounts,
   pickAttendanceValue,
   pickRepresentativeEdition,
   sortCons,
@@ -93,6 +94,27 @@ describe("representative edition, interest, and cons sorts", () => {
     assert.equal(clampInterestForColor(12), 5);
     assert.equal(clampInterestForColor(-9), -5);
     assert.equal(clampInterestForColor(3), 3);
+  });
+
+  it("groups scoring statuses in vocabulary order and omits zeros", () => {
+    assert.deepEqual(
+      interestStatusCounts([
+        { status: "skipped" },
+        { status: "attended" },
+        { status: "unknown" },
+        { status: "submitted" },
+        { status: "attended" },
+        { status: "withdrawn" },
+        { status: "open" },
+      ]),
+      [
+        { status: "open", count: 1, contribution: 1, label: "ready to apply" },
+        { status: "submitted", count: 1, contribution: 1, label: "submitted" },
+        { status: "attended", count: 2, contribution: 1, label: "attended" },
+        { status: "skipped", count: 1, contribution: -1, label: "skipped" },
+      ],
+    );
+    assert.deepEqual(interestStatusCounts([{ status: "unknown" }, { status: "withdrawn" }]), []);
   });
 
   it("sorts by interest, distance, month, and name with name as the tie-break", () => {

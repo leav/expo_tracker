@@ -3,7 +3,7 @@ import { conventions, editions } from "../db/schema";
 import { compareCycleLabels } from "./cycles";
 import type { TrackerDb } from "./db";
 import { seedDriveMinutes } from "./driveTime";
-import { editionInterest, isStatus, statusLabels, type Status } from "./status";
+import { editionInterest, isStatus, statusLabels, statuses, type Status } from "./status";
 
 export const consSortKeys = ["interest", "distance", "time", "name"] as const;
 export type ConsSortKey = (typeof consSortKeys)[number];
@@ -79,6 +79,33 @@ export function conventionInterest(
   editionRows: { status: string }[],
 ): number {
   return manualInterest + editionRows.reduce((sum, row) => sum + editionInterest(row.status), 0);
+}
+
+export type InterestStatusCount = {
+  status: Status;
+  count: number;
+  contribution: 1 | -1;
+  label: string;
+};
+
+export function interestStatusCounts(editionRows: { status: string }[]): InterestStatusCount[] {
+  const counts = new Map<Status, number>();
+  for (const row of editionRows) {
+    if (!isStatus(row.status) || editionInterest(row.status) === 0) continue;
+    counts.set(row.status, (counts.get(row.status) ?? 0) + 1);
+  }
+  return statuses
+    .filter((status) => (counts.get(status) ?? 0) > 0)
+    .map((status) => {
+      const count = counts.get(status)!;
+      const contribution = editionInterest(status) as 1 | -1;
+      return {
+        status,
+        count,
+        contribution,
+        label: statusLabels[status].toLowerCase(),
+      };
+    });
 }
 
 export function clampInterestForColor(score: number): number {
