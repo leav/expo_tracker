@@ -3,6 +3,7 @@ import Link from "next/link";
 const primary = [
   { href: "/", label: "Cons" },
   { href: "/lineups", label: "Lineups" },
+  { href: "/calendar", label: "Calendar" },
   { href: "/jobs", label: "Jobs" },
   { href: "/settings", label: "Settings" },
 ] as const;

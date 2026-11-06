@@ -28,6 +28,7 @@ Rules for every milestone:
 | M4.2 | done | Delete convention and delete edition. |
 | M4.3 | done | Skipped status; no dedicated Skip button. |
 | M4.4 | done | Status-weighted interest from edition statuses plus manual interest. |
+| M4.5 | done | In-app Calendar tab for future dates on interested conventions. |
 | M5 | not started | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
 | M7 | not started | Manually started Gmail scan jobs. |
@@ -60,6 +61,7 @@ The app replaces that sheet as the place to edit. The sheet is imported once and
 
 - **Cons** is the stable catalog. It uses a compact grid with one tile per convention.
 - **Lineups** is the date-ordered work list of active editions.
+- **Calendar** is a year grid of future application-start and event-start dates for conventions with interest above zero. Application opens are yellow; con starts are green. It is not an alarm and does not create Google Calendar events.
 - **Jobs** is where the owner starts Gmail, website, pasted-text, Discord, or discovery work and later reviews each job's results.
 - **Settings** holds the Google connection and app-wide configuration.
 - **Import** remains a setup tool and is not permanent primary navigation.
@@ -138,7 +140,7 @@ Two entry points, one database:
 
 | Process | Command | Role |
 | --- | --- | --- |
-| Web UI | `pnpm dev` | Cons, Lineups, Jobs, Import, Discovery, and Settings. Port **4747**, bound to `127.0.0.1`. |
+| Web UI | `pnpm dev` | Cons, Lineups, Calendar, Jobs, Import, Discovery, and Settings. Port **4747**, bound to `127.0.0.1`. |
 | Worker | started with the server, also `pnpm worker` | Claims queued jobs and retries Calendar synchronization. |
 
 ```mermaid
@@ -585,7 +587,7 @@ Each edition can have two opt-in all-day events. Both use `America/Los_Angeles` 
 
 Scope: `https://www.googleapis.com/auth/calendar.events`. The app only patches event ids it stored.
 
-There are no in-app date notices. Lineups shows upcoming work; Calendar events are the alarms that work when the laptop is shut.
+There are no in-app date notices or alarms. Lineups shows upcoming work; the in-app Calendar tab (M4.5) is a read-only year grid of stored dates; Google Calendar events are the alarms that work when the laptop is shut.
 
 ## Discovery and drive time
 
@@ -640,7 +642,7 @@ Keep these boundaries. A milestone may add files only in the modules it names.
 | Module | Responsibility |
 | --- | --- |
 | `src/db` | Drizzle client, migrations, SQLite path `data/vendor.sqlite`. |
-| `src/domain` | Types, status transitions, Cons/Lineups sorting, `createJobs`, `resolveJobResults`, `upsertJobResult`, edition naming, alias normalization. No I/O beyond the db passed in. |
+| `src/domain` | Types, status transitions, Cons/Lineups sorting, Calendar schedule markers, `createJobs`, `resolveJobResults`, `upsertJobResult`, edition naming, alias normalization. No I/O beyond the db passed in. |
 | `src/import` | Sheet CSV parse, heuristics, review decisions. |
 | `src/google` | OAuth, token refresh, Calendar create/patch/delete, Gmail list/get. |
 | `src/jobs` | Durable queue queries, job claim/finish behavior, and saved source queries. |
@@ -659,18 +661,20 @@ Keep these boundaries. A milestone may add files only in the modules it names.
 | `/` | M4 | Cons grid and sorting. |
 | `/cons/[id]` | M4 | Convention defaults, interest, aliases, saved sources, and editions. |
 | `/lineups` | M4 | Active editions ordered by action date, then Needs dates. |
+| `/calendar` | M4.5 | Year grid of future application-start and event-start dates for interested conventions. |
 | `/jobs` | M6 | Submit jobs and browse Queued, Running, Needs review, Done, and Failed groups. |
 | `/jobs/[id]` | M6 | Job evidence, result assignment, apply, dismissal, and retry. |
 | `/import` | M3 | Review ambiguous rows and proposed merges. |
 | `/discover` | M11 | Within a day, and Farther. |
 | `/settings` | M5 | Google connection, owner, and drive-limit hours. Sources are edited on the con page. |
 
-The top navigation shows **Cons**, **Lineups**, **Jobs**, and **Settings** on every primary page. Import is linked as a setup tool rather than a permanent top-level item. Design for desktop first, but keep the Cons grid, Lineups, and Jobs usable at narrow widths. There is no separate mobile design.
+The top navigation shows **Cons**, **Lineups**, **Calendar**, **Jobs**, and **Settings** on every primary page. Import is linked as a setup tool rather than a permanent top-level item. Design for desktop first, but keep the Cons grid, Lineups, Calendar, and Jobs usable at narrow widths. There is no separate mobile design.
 
 Empty states use specific, actionable copy:
 
 - no conventions yet: point to import or add;
 - no active editions in Lineups;
+- no future dates for interested conventions on Calendar;
 - no jobs yet, and no jobs in a particular state group;
 - Google not connected; and
 - no saved sources on a con or edition.
@@ -870,7 +874,29 @@ M1–M3 below are preserved as historical records of what was built, including t
 
 **Out of scope:** Calendar, Jobs, schema changes, and storing interest on the convention row.
 
-**Completion note — 2026-11-05:** `editionInterest` scores statuses (+1 applying/applied including attended, −1 skipped, 0 unknown/withdrawn); `conventionInterest` sums those with manual interest. Cons sort/color and con detail copy updated. Browser: created M44 Interest Con with manual 2, Attended 2025, Skipped 2026 → detail showed Interest 2; Cons interest sort listed it with accessible name interest 2 among other +1/−1/0 tiles. Next agent: M5 Calendar.
+**Completion note — 2026-11-05:** `editionInterest` scores statuses (+1 applying/applied including attended, −1 skipped, 0 unknown/withdrawn); `conventionInterest` sums those with manual interest. Cons sort/color and con detail copy updated. Browser: created M44 Interest Con with manual 2, Attended 2025, Skipped 2026 → detail showed Interest 2; Cons interest sort listed it with accessible name interest 2 among other +1/−1/0 tiles. Next agent: M4.5 in-app Calendar.
+
+### M4.5 — In-app Calendar tab
+
+**Deliverables**
+
+- Add a primary **Calendar** nav item and `/calendar` year grid (`?year=YYYY`, default current Los Angeles year). Previous/Next move by one year.
+- Plot future `application_start_date` (**Application opens**, yellow) and `start_date` (**Starts**, green) only for editions whose convention has `conventionInterest` greater than 0.
+- Omit skipped and withdrawn editions even when the series interest is positive.
+- Omit past dates (before today in `America/Los_Angeles`). Do not plot end dates, application end dates, or result dates.
+- Put marker selection and year/month-grid helpers in pure domain functions with unit tests. Keep Lineups unchanged.
+- Do not create Google Calendar events or in-app alarms.
+
+**Acceptance**
+
+- An interested convention with a future application start and a future event start shows two markers; clicking a marker opens the con page.
+- Zero-interest conventions, skipped/withdrawn editions, and past dates do not appear.
+- Previous year is disabled when that year is entirely before today.
+- Unit tests cover interest cutoff, skipped/withdrawn exclusion, both date kinds, today inclusive, and past dates omitted.
+
+**Out of scope:** Google OAuth, reminder sync, and Jobs.
+
+**Completion note — 2026-11-05:** `/calendar` year grid with `?year=` paging; `scheduleMarkersFromRows` / `listScheduleMarkers` plot future `application_start_date` (Application opens, yellow) and `start_date` (Starts, green) when `conventionInterest > 0`, omitting skipped/withdrawn editions and past dates. Nav order Cons → Lineups → Calendar → Jobs → Settings. Browser: created M45 Calendar Con (manual interest 2, skipped 2026 with Nov/Dec dates, waiting 2027 opens 2026-11-20 starts 2027-03-15); year view showed Application opens and Starts across months; Previous disabled for prior years; marker opens `/cons/51`. Next agent: M5 Google Calendar reminders.
 
 ### M5 — Manual Calendar reminders
 
