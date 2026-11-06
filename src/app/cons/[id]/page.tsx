@@ -10,6 +10,7 @@ import {
   updateEditionAction,
 } from "../../actions";
 import { ConfirmForm } from "../../../components/confirm-form";
+import { EditionDateFields } from "../../../components/edition-date-fields";
 import { InterestHearts } from "../../../components/interest-hearts";
 import { Button } from "../../../components/ui/button";
 import { interestStatusCounts } from "../../../domain/cons";
@@ -163,10 +164,7 @@ export default async function ConsDetailPage({
           <input type="hidden" name="status" value="unknown" />
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Cycle" name="cycleLabel" required placeholder="2027" />
-            <Field label="Application start" name="applicationStartDate" type="date" />
-            <Field label="Application end" name="applicationEndDate" type="date" />
-            <Field label="Event start" name="startDate" type="date" />
-            <Field label="Event end" name="endDate" type="date" />
+            <EditionDateFields />
           </div>
           <Button type="submit" className="w-fit">Add edition</Button>
         </form>
@@ -191,12 +189,16 @@ function EditionForm({
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Cycle" name="cycleLabel" defaultValue={edition.cycleLabel} required />
           <SelectField label="Status" name="status" value={status} />
-          <Field label="Application start" name="applicationStartDate" type="date" defaultValue={edition.applicationStartDate ?? ""} />
-          <Field label="Application end" name="applicationEndDate" type="date" defaultValue={edition.applicationEndDate ?? ""} />
-          <Field label="Event start" name="startDate" type="date" defaultValue={edition.startDate ?? ""} />
-          <Field label="Event end" name="endDate" type="date" defaultValue={edition.endDate ?? ""} />
+          <EditionDateFields
+            defaults={{
+              applicationStartDate: edition.applicationStartDate ?? "",
+              applicationEndDate: edition.applicationEndDate ?? "",
+              resultDate: edition.resultDate ?? "",
+              startDate: edition.startDate ?? "",
+              endDate: edition.endDate ?? "",
+            }}
+          />
           <Field label="Submitted" name="submittedAt" type="date" defaultValue={edition.submittedAt ?? ""} />
-          <Field label="Result" name="resultDate" type="date" defaultValue={edition.resultDate ?? ""} />
         </div>
         <label className="grid gap-1 text-sm">
           Notes

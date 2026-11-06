@@ -13,6 +13,7 @@ import { isLineupStatus, isStatus, type Status } from "./status";
 
 export {
   addCalendarDays,
+  addCalendarMonths,
   applyLineupMove,
   canMoveLineupStatus,
   compareLineupItems,
@@ -28,6 +29,7 @@ export {
   type LineupItem,
   type LineupSource,
 } from "./lineupBoard";
+export { fillEditionDates, type EditionDateFields } from "./editionDates";
 
 export function listLineups(db: TrackerDb, today: string): LineupBoard {
   const conventionRows = db.select().from(conventions).all();

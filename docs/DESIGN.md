@@ -31,6 +31,7 @@ Rules for every milestone:
 | M4.5 | done | In-app Calendar tab for application and event dates on interested conventions. |
 | M4.6 | done | City and state live only on the convention. |
 | M4.7 | done | Time-centric Lineups board with drag-and-drop status moves. |
+| M4.8 | done | Auto-fill empty edition dates from application or event start. |
 | M5 | not started | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
 | M7 | not started | Manually started Gmail scan jobs. |
@@ -948,7 +949,29 @@ M1–M3 below are preserved as historical records of what was built, including t
 
 **Out of scope:** Calendar reminders, Jobs, and any other status vocabulary changes.
 
-**Completion note — 2026-11-06:** Lineups is a five-column board (Waiting, Ready, Submitted, Waitlisted, Approved) with status-specific dates, LA relative cues, and a 7-day estimated Ready close. Domain lives in `src/domain/lineupBoard.ts`; `moveLineupEdition` plus a non-redirecting action persist drag targets. Hearts use unclamped convention interest as ❤️ (positive) or 💔 (negative); the con header is `Interest Score ❤️ = [manual] + status counts`. Browser: desktop five-column grid, Ready emphasized, estimated italics, Date not set first; keyboard moved M47 2027 waiting→submitted; Approved tray Attended (2028) and Withdrawn (2029) persisted and left the board; after those drops `/cons/54` showed `Interest Score ❤️❤️❤️❤️ = [2] + 1 submitted + 1 attended`; FanimeCon card opens `/cons/24#edition-26`; 390px keeps five columns (`overflow-x`, client 390 / scroll 1344). Next agent: M5.
+**Completion note — 2026-11-06:** Lineups is a five-column board (Waiting, Ready, Submitted, Waitlisted, Approved) with status-specific dates, LA relative cues, and a 7-day estimated Ready close. Domain lives in `src/domain/lineupBoard.ts`; `moveLineupEdition` plus a non-redirecting action persist drag targets. Hearts use unclamped convention interest as ❤️ (positive) or 💔 (negative); the con header is `Interest Score ❤️ = [manual] + status counts`. Browser: desktop five-column grid, Ready emphasized, estimated italics, Date not set first; keyboard moved M47 2027 waiting→submitted; Approved tray Attended (2028) and Withdrawn (2029) persisted and left the board; after those drops `/cons/54` showed `Interest Score ❤️❤️❤️❤️ = [2] + 1 submitted + 1 attended`; FanimeCon card opens `/cons/24#edition-26`; 390px keeps five columns (`overflow-x`, client 390 / scroll 1344). Next agent: M4.8 edition date auto-fill.
+
+### M4.8 — Edition date auto-fill
+
+**Deliverables**
+
+- When the owner sets an edition application start in the Add or Edit form, fill empty application end with start plus 7 calendar days and empty result with start plus 1 calendar month (same day next month, clamped to the last day).
+- When the owner sets an event start, fill empty event end with the next calendar day.
+- Never overwrite a date that already has a value. Changing start later does not rewrite filled fields. The owner may edit or clear after fill; values persist only on save.
+- Put the calendar arithmetic and fill rules in pure domain functions with unit tests. Import and jobs stay unchanged.
+- Show a Result date field on Add edition so the one-month fill is visible before save.
+
+**Acceptance**
+
+- Filling application start alone populates application end and result when those fields were empty.
+- Filling event start alone populates event end when it was empty.
+- Existing end or result values are left alone. Cleared auto-filled values stay empty after save.
+- Unit tests cover week, month, day fills, month/year/leap-year clamps, and no-overwrite.
+- Browser verification covers Add and Edit on `/cons/[id]`.
+
+**Out of scope:** Calendar reminders, Jobs, and import date heuristics.
+
+**Completion note — 2026-11-06:** `addCalendarMonths` and `fillEditionDates` fill empty application end (+7 days), result (+1 month, clamped), and event end (+1 day) from start dates. Client `EditionDateFields` on Add/Edit; Add edition now includes Result. Browser on FanimeCon: Add 2028 with app start 2026-11-06 filled end 11/13 and result 12/06; event start 2027-05-22 filled end 05/23; save persisted. Changing start left existing end/result alone; clearing Result and saving kept it empty after reload. Edit 2027 with empty end/result filled on application-start change. Next agent: M5.
 
 ### M5 — Manual Calendar reminders
 

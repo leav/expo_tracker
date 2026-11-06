@@ -64,6 +64,16 @@ export function addCalendarDays(date: string, days: number): string {
   return utc.toISOString().slice(0, 10);
 }
 
+export function addCalendarMonths(date: string, months: number): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const totalMonths = year * 12 + (month - 1) + months;
+  const nextYear = Math.floor(totalMonths / 12);
+  const nextMonth = (totalMonths % 12) + 1;
+  const lastDay = new Date(Date.UTC(nextYear, nextMonth, 0)).getUTCDate();
+  const nextDay = Math.min(day, lastDay);
+  return `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-${String(nextDay).padStart(2, "0")}`;
+}
+
 export function calendarDayDelta(date: string, today: string): number {
   const [year, month, day] = date.split("-").map(Number);
   const [todayYear, todayMonth, todayDay] = today.split("-").map(Number);
