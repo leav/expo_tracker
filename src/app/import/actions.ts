@@ -8,6 +8,7 @@ import { openDatabase } from "../../db";
 import { acceptAlias, acceptMerge, acceptUnresolved, applyParsedRows, dismissProposal } from "../../import/apply";
 import { loadSheetCsv } from "../../import/load";
 import { parseSheet } from "../../import/parse";
+import { revalidateWorkspace } from "../revalidate";
 
 function fail(result: DomainResult<unknown>): never {
   const message = result.ok ? "Saved." : result.error;
@@ -22,12 +23,14 @@ export async function importSheetAction() {
     const message = error instanceof Error ? error.message : "Import failed.";
     redirect(`/import?error=${encodeURIComponent(message)}`);
   }
+  revalidateWorkspace();
   redirect("/import");
 }
 
 export async function acceptMergeAction(form: FormData) {
   const result = acceptMerge(openDatabase(), Number(form.get("proposalId")));
   if (!result.ok) fail(result);
+  revalidateWorkspace();
   redirect("/import");
 }
 
@@ -61,6 +64,7 @@ export async function acceptUnresolvedAction(form: FormData) {
     status: statusValue && isStatus(statusValue) ? statusValue : undefined,
   });
   if (!result.ok) fail(result);
+  revalidateWorkspace();
   redirect("/import");
 }
 

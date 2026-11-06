@@ -18,6 +18,7 @@ import {
 } from "../domain/editions";
 import { blankToNull, isError, parseAttendance, parseOptionalMinutes, parseSignedInteger } from "../domain/fields";
 import { openDatabase } from "../db";
+import { revalidateWorkspace } from "./revalidate";
 
 function fail(path: string, result: DomainResult<unknown>): never {
   const message = result.ok ? "Saved." : result.error;
@@ -48,6 +49,7 @@ export async function createConventionAction(form: FormData) {
   if (isError(input)) fail("/", { ok: false, error: input.error });
   const result = createConvention(openDatabase(), input);
   if (!result.ok) fail("/", result);
+  revalidateWorkspace(result.value.id);
   redirect(`/cons/${result.value.id}`);
 }
 
@@ -57,6 +59,7 @@ export async function updateConventionAction(form: FormData) {
   if (isError(input)) fail(`/cons/${id}`, { ok: false, error: input.error });
   const result = updateConvention(openDatabase(), { ...input, id });
   if (!result.ok) fail(`/cons/${id}`, result);
+  revalidateWorkspace(id);
   redirect(`/cons/${id}`);
 }
 
@@ -64,6 +67,7 @@ export async function deleteConventionAction(form: FormData) {
   const id = Number(form.get("conventionId"));
   const result = deleteConvention(openDatabase(), id);
   if (!result.ok) fail(`/cons/${id}`, result);
+  revalidateWorkspace(id);
   redirect("/");
 }
 
@@ -92,6 +96,7 @@ export async function createEditionAction(form: FormData) {
   if (isError(input)) fail(`/cons/${conventionId}`, { ok: false, error: input.error });
   const result = createEdition(openDatabase(), input);
   if (!result.ok) fail(`/cons/${conventionId}`, result);
+  revalidateWorkspace(conventionId);
   redirect(`/cons/${conventionId}`);
 }
 
@@ -102,6 +107,7 @@ export async function updateEditionAction(form: FormData) {
   if (isError(input)) fail(`/cons/${conventionId}`, { ok: false, error: input.error });
   const result = updateEdition(openDatabase(), editionId, input);
   if (!result.ok) fail(`/cons/${conventionId}`, result);
+  revalidateWorkspace(conventionId);
   redirect(`/cons/${conventionId}`);
 }
 
@@ -110,6 +116,7 @@ export async function deleteEditionAction(form: FormData) {
   const editionId = Number(form.get("editionId"));
   const result = deleteEdition(openDatabase(), editionId);
   if (!result.ok) fail(`/cons/${conventionId}`, result);
+  revalidateWorkspace(conventionId);
   redirect(`/cons/${conventionId}`);
 }
 
