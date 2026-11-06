@@ -32,9 +32,9 @@ export default async function Home({
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Cons</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Expos</h1>
           <p className="text-sm text-muted-foreground">
-            One tile per convention. Color is interest; the score lives on the con page.
+            List of all tracked expos.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">

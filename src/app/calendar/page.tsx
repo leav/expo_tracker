@@ -108,7 +108,7 @@ export default async function CalendarPage({
 
       {!anyMarkers ? (
         <p className="text-muted-foreground">
-          No dates for interested conventions. Raise interest on Cons or add application and event dates.
+          No dates for interested conventions. Raise interest on Expos or add application and event dates.
         </p>
       ) : null}
 

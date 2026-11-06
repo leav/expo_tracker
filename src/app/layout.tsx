@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Artist-alley tracker",
+  title: "Expo Tracker",
   description:
     "Local tracker for artist-alley applications to cons that come back every year.",
 };

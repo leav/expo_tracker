@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const primary = [
-  { href: "/", label: "Cons" },
+  { href: "/", label: "Expos" },
   { href: "/lineups", label: "Lineups" },
   { href: "/calendar", label: "Calendar" },
   { href: "/jobs", label: "Jobs" },
@@ -13,7 +13,7 @@ export function AppNav() {
     <header className="border-b">
       <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Link href="/" className="font-medium tracking-tight">
-          Artist-alley tracker
+          Expo Tracker
         </Link>
         <nav className="flex flex-wrap gap-4 text-sm">
           {primary.map((item) => (
