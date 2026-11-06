@@ -3,7 +3,7 @@ import { conventions, editions } from "../db/schema";
 import { compareCycleLabels } from "./cycles";
 import type { TrackerDb } from "./db";
 import { seedDriveMinutes } from "./driveTime";
-import { isStatus, statusLabels, type Status } from "./status";
+import { editionInterest, isStatus, statusLabels, type Status } from "./status";
 
 export const consSortKeys = ["interest", "distance", "time", "name"] as const;
 export type ConsSortKey = (typeof consSortKeys)[number];
@@ -80,7 +80,7 @@ export function conventionInterest(
   manualInterest: number,
   editionRows: { status: string }[],
 ): number {
-  return manualInterest + editionRows.filter((row) => row.status === "attended").length;
+  return manualInterest + editionRows.reduce((sum, row) => sum + editionInterest(row.status), 0);
 }
 
 export function clampInterestForColor(score: number): number {

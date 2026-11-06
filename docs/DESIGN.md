@@ -27,6 +27,7 @@ Rules for every milestone:
 | M4.1 | done | Location is city and state only. |
 | M4.2 | done | Delete convention and delete edition. |
 | M4.3 | done | Skipped status; no dedicated Skip button. |
+| M4.4 | done | Status-weighted interest from edition statuses plus manual interest. |
 | M5 | not started | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
 | M7 | not started | Manually started Gmail scan jobs. |
@@ -228,7 +229,7 @@ The tile shows convention name, summarized event date, summarized status, and ci
 
 Cons supports four sorts. Convention name ascending is the final tie-breaker for every sort:
 
-- **Interest:** `manual_interest + count(editions where status = attended)`, descending.
+- **Interest:** `manual_interest + sum(edition interest)`, descending. Each edition contributes `+1` for waiting to apply, ready to apply, submitted, waitlisted, approved, attended, or rejected; `-1` for skipped; and `0` for unknown, withdrawn, or any other status.
 - **Distance:** `drive_minutes`, ascending, with unknown values last.
 - **Time:** summarized start month from January through December, ignoring year, with unknown values last.
 - **Name:** display name ascending.
@@ -374,18 +375,18 @@ A completed execution with no proposed changes goes directly to `done`. A job wi
 
 An edition has one lifecycle status. There is no separate intent field.
 
-| Status       | UI label         | Meaning                                         | Lineups action date                         |
-| ------------ | ---------------- | ----------------------------------------------- | ------------------------------------------- |
-| `unknown`    | Unknown          | No reliable application state yet.              | Excluded.                                   |
-| `waiting_to_apply` | Waiting to apply | Owner is actively waiting for applications to open. | Application start; otherwise Needs dates. |
-| `open`       | Ready to apply   | Window is open and the owner has not submitted. | Application start, including overdue dates. |
-| `submitted`  | Submitted        | Owner applied and awaits a result.              | Result date, falling back to con start.     |
-| `waitlisted` | Waitlisted       | Owner is on the waitlist.                       | Result date, falling back to con start.     |
-| `approved`   | Approved         | Application was approved.                       | Con start.                                  |
-| `attended`   | Attended         | Owner went. Set by hand. No job sets it.        | Excluded.                                   |
-| `rejected`   | Rejected         | Application was rejected.                       | Excluded.                                   |
-| `withdrawn`  | Withdrawn        | Owner backed out.                               | Excluded.                                   |
-| `skipped`    | Skipped          | Owner decided not to apply.                     | Excluded.                                   |
+| Status       | UI label         | Meaning                                         | Lineups action date                         | Interest |
+| ------------ | ---------------- | ----------------------------------------------- | ------------------------------------------- | -------- |
+| `unknown`    | Unknown          | No reliable application state yet.              | Excluded.                                   | `0` |
+| `waiting_to_apply` | Waiting to apply | Owner is actively waiting for applications to open. | Application start; otherwise Needs dates. | `+1` |
+| `open`       | Ready to apply   | Window is open and the owner has not submitted. | Application start, including overdue dates. | `+1` |
+| `submitted`  | Submitted        | Owner applied and awaits a result.              | Result date, falling back to con start.     | `+1` |
+| `waitlisted` | Waitlisted       | Owner is on the waitlist.                       | Result date, falling back to con start.     | `+1` |
+| `approved`   | Approved         | Application was approved.                       | Con start.                                  | `+1` |
+| `attended`   | Attended         | Owner went. Set by hand. No job sets it.        | Excluded.                                   | `+1` |
+| `rejected`   | Rejected         | Application was rejected.                       | Excluded.                                   | `+1` |
+| `withdrawn`  | Withdrawn        | Owner backed out.                               | Excluded.                                   | `0` |
+| `skipped`    | Skipped          | Owner decided not to apply.                     | Excluded.                                   | `-1` |
 
 Lineups contains `waiting_to_apply`, `open`, `submitted`, `waitlisted`, and `approved`. Dated rows sort by action date ascending, then convention name, then cycle label. Undated active rows appear afterward in **Needs dates**. An overdue Approved row remains until the owner marks it Attended or Withdrawn.
 
@@ -851,7 +852,25 @@ M1–M3 below are preserved as historical records of what was built, including t
 
 **Out of scope:** Calendar, Jobs, and other status vocabulary changes.
 
-**Completion note — 2026-11-05:** Status `skipped` replaces `passed`; migration `0004` rewrites existing rows; Skip button removed. Browser: set an edition to Skipped via the dropdown, confirmed Cons label and Lineups exclusion; Delete still present. Next agent: M5 Calendar.
+**Completion note — 2026-11-05:** Status `skipped` replaces `passed`; migration `0004` rewrites existing rows; Skip button removed. Browser: set an edition to Skipped via the dropdown, confirmed Cons label and Lineups exclusion; Delete still present. Next agent: M4.4 interest weights.
+
+### M4.4 — Status-weighted interest
+
+**Deliverables**
+
+- Replace attended-only interest with per-edition scores: `+1` for waiting to apply, ready to apply, submitted, waitlisted, approved, attended, and rejected; `-1` for skipped; `0` for unknown, withdrawn, and any other status.
+- Total interest is the sum of edition scores plus `manual_interest`. Keep color clamping at `-5…+5` for Cons tiles only.
+- Put the score rules in pure domain functions with unit tests. Update the con detail interest copy.
+
+**Acceptance**
+
+- Cons interest sort and tile color use the new total.
+- The con detail page shows the unclamped total from manual interest plus edition statuses.
+- Unit tests cover +1 statuses (including attended and open), skipped as −1, unknown/withdrawn as 0, mixed editions with signed manual interest, and color clamping.
+
+**Out of scope:** Calendar, Jobs, schema changes, and storing interest on the convention row.
+
+**Completion note — 2026-11-05:** `editionInterest` scores statuses (+1 applying/applied including attended, −1 skipped, 0 unknown/withdrawn); `conventionInterest` sums those with manual interest. Cons sort/color and con detail copy updated. Browser: created M44 Interest Con with manual 2, Attended 2025, Skipped 2026 → detail showed Interest 2; Cons interest sort listed it with accessible name interest 2 among other +1/−1/0 tiles. Next agent: M5 Calendar.
 
 ### M5 — Manual Calendar reminders
 

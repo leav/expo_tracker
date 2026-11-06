@@ -66,8 +66,30 @@ describe("representative edition, interest, and cons sorts", () => {
     assert.equal(pickAttendanceValue(rows, "2026-11-05"), 27500);
   });
 
-  it("counts attended editions plus signed manual interest and clamps color", () => {
-    assert.equal(conventionInterest(-2, [{ status: "attended" }, { status: "approved" }, { status: "attended" }]), 0);
+  it("sums status-weighted edition interest plus signed manual interest and clamps color", () => {
+    assert.equal(
+      conventionInterest(0, [
+        { status: "waiting_to_apply" },
+        { status: "open" },
+        { status: "submitted" },
+        { status: "waitlisted" },
+        { status: "approved" },
+        { status: "attended" },
+        { status: "rejected" },
+      ]),
+      7,
+    );
+    assert.equal(conventionInterest(0, [{ status: "skipped" }]), -1);
+    assert.equal(conventionInterest(0, [{ status: "unknown" }, { status: "withdrawn" }]), 0);
+    assert.equal(
+      conventionInterest(-2, [
+        { status: "attended" },
+        { status: "approved" },
+        { status: "skipped" },
+        { status: "unknown" },
+      ]),
+      -1,
+    );
     assert.equal(clampInterestForColor(12), 5);
     assert.equal(clampInterestForColor(-9), -5);
     assert.equal(clampInterestForColor(3), 3);

@@ -38,7 +38,7 @@ export default async function ConsDetailPage({
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">{convention.displayName}</h1>
         <p className="text-sm text-muted-foreground">
-          Interest {series.interest} from manual {convention.manualInterest} plus attended editions. Defaults copy into
+          Interest {series.interest} from manual {convention.manualInterest} plus edition statuses. Defaults copy into
           new editions.
         </p>
       </header>

@@ -60,6 +60,22 @@ export function isDecisionStatus(status: Status): boolean {
   return decisionStatusSet.has(status);
 }
 
+const positiveInterestStatuses = new Set<Status>([
+  "waiting_to_apply",
+  "open",
+  "submitted",
+  "waitlisted",
+  "approved",
+  "attended",
+  "rejected",
+]);
+
+export function editionInterest(status: string): 1 | -1 | 0 {
+  if (status === "skipped") return -1;
+  if (isStatus(status) && positiveInterestStatuses.has(status)) return 1;
+  return 0;
+}
+
 export function normalizeLegacyStatus(value: string | null | undefined): Status | null {
   if (!value) return null;
   if (value === "accepted") return "approved";
