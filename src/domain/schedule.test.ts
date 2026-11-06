@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildMonthCells,
+  canShiftYear,
   firstWeekdaySunday,
-  isYearEntirelyBefore,
   markersForMonth,
   parseYear,
   scheduleMarkersFromRows,
@@ -23,26 +23,23 @@ function convention(
 }
 
 describe("scheduleMarkersFromRows", () => {
-  it("plots future application start and event start for interested conventions", () => {
-    const markers = scheduleMarkersFromRows(
-      [
-        convention({
-          id: 1,
-          displayName: "FanimeCon",
-          manualInterest: 0,
-          editions: [
-            {
-              id: 10,
-              cycleLabel: "2027",
-              status: "waiting_to_apply",
-              applicationStartDate: "2026-11-08",
-              startDate: "2027-05-22",
-            },
-          ],
-        }),
-      ],
-      "2026-11-05",
-    );
+  it("plots application start and event start for interested conventions", () => {
+    const markers = scheduleMarkersFromRows([
+      convention({
+        id: 1,
+        displayName: "FanimeCon",
+        manualInterest: 0,
+        editions: [
+          {
+            id: 10,
+            cycleLabel: "2027",
+            status: "waiting_to_apply",
+            applicationStartDate: "2026-11-08",
+            startDate: "2027-05-22",
+          },
+        ],
+      }),
+    ]);
     assert.deepEqual(
       markers.map((marker) => ({ date: marker.date, kind: marker.kind, kindLabel: marker.kindLabel })),
       [
@@ -52,113 +49,111 @@ describe("scheduleMarkersFromRows", () => {
     );
   });
 
-  it("includes today and omits past dates", () => {
-    const markers = scheduleMarkersFromRows(
-      [
-        convention({
-          id: 1,
-          displayName: "Today Con",
-          editions: [
-            {
-              id: 1,
-              cycleLabel: "2026",
-              status: "open",
-              applicationStartDate: "2026-11-05",
-              startDate: "2026-11-04",
-            },
-          ],
-        }),
-      ],
-      "2026-11-05",
-    );
+  it("includes past dates, today, and future dates", () => {
+    const markers = scheduleMarkersFromRows([
+      convention({
+        id: 1,
+        displayName: "Today Con",
+        editions: [
+          {
+            id: 1,
+            cycleLabel: "2026",
+            status: "open",
+            applicationStartDate: "2026-11-05",
+            startDate: "2026-11-04",
+          },
+          {
+            id: 2,
+            cycleLabel: "2027",
+            status: "waiting_to_apply",
+            applicationStartDate: "2026-12-01",
+            startDate: null,
+          },
+        ],
+      }),
+    ]);
     assert.deepEqual(
-      markers.map((marker) => marker.date),
-      ["2026-11-05"],
+      markers.map((marker) => ({ date: marker.date, kind: marker.kind })),
+      [
+        { date: "2026-11-04", kind: "event_start" },
+        { date: "2026-11-05", kind: "application_start" },
+        { date: "2026-12-01", kind: "application_start" },
+      ],
     );
-    assert.equal(markers[0]?.kind, "application_start");
   });
 
   it("omits zero-interest conventions", () => {
-    const markers = scheduleMarkersFromRows(
-      [
-        convention({
-          id: 1,
-          displayName: "Unknown Con",
-          manualInterest: 0,
-          editions: [
-            {
-              id: 1,
-              cycleLabel: "2027",
-              status: "unknown",
-              applicationStartDate: "2026-12-01",
-              startDate: "2027-01-01",
-            },
-          ],
-        }),
-      ],
-      "2026-11-05",
-    );
+    const markers = scheduleMarkersFromRows([
+      convention({
+        id: 1,
+        displayName: "Unknown Con",
+        manualInterest: 0,
+        editions: [
+          {
+            id: 1,
+            cycleLabel: "2027",
+            status: "unknown",
+            applicationStartDate: "2026-12-01",
+            startDate: "2027-01-01",
+          },
+        ],
+      }),
+    ]);
     assert.equal(markers.length, 0);
   });
 
   it("includes unknown editions when manual interest makes the series positive", () => {
-    const markers = scheduleMarkersFromRows(
-      [
-        convention({
-          id: 1,
-          displayName: "Manual Con",
-          manualInterest: 2,
-          editions: [
-            {
-              id: 1,
-              cycleLabel: "2027",
-              status: "unknown",
-              applicationStartDate: "2026-12-01",
-              startDate: null,
-            },
-          ],
-        }),
-      ],
-      "2026-11-05",
-    );
+    const markers = scheduleMarkersFromRows([
+      convention({
+        id: 1,
+        displayName: "Manual Con",
+        manualInterest: 2,
+        editions: [
+          {
+            id: 1,
+            cycleLabel: "2027",
+            status: "unknown",
+            applicationStartDate: "2026-12-01",
+            startDate: null,
+          },
+        ],
+      }),
+    ]);
     assert.equal(markers.length, 1);
     assert.equal(markers[0]?.kind, "application_start");
   });
 
   it("omits skipped and withdrawn editions even when series interest is positive", () => {
-    const markers = scheduleMarkersFromRows(
-      [
-        convention({
-          id: 1,
-          displayName: "Mixed Con",
-          manualInterest: 2,
-          editions: [
-            {
-              id: 1,
-              cycleLabel: "2026",
-              status: "skipped",
-              applicationStartDate: "2026-12-01",
-              startDate: "2027-01-01",
-            },
-            {
-              id: 2,
-              cycleLabel: "2027",
-              status: "withdrawn",
-              applicationStartDate: "2026-12-15",
-              startDate: "2027-02-01",
-            },
-            {
-              id: 3,
-              cycleLabel: "2028",
-              status: "waiting_to_apply",
-              applicationStartDate: "2027-11-01",
-              startDate: "2028-05-01",
-            },
-          ],
-        }),
-      ],
-      "2026-11-05",
-    );
+    const markers = scheduleMarkersFromRows([
+      convention({
+        id: 1,
+        displayName: "Mixed Con",
+        manualInterest: 2,
+        editions: [
+          {
+            id: 1,
+            cycleLabel: "2026",
+            status: "skipped",
+            applicationStartDate: "2026-12-01",
+            startDate: "2027-01-01",
+          },
+          {
+            id: 2,
+            cycleLabel: "2027",
+            status: "withdrawn",
+            applicationStartDate: "2026-12-15",
+            startDate: "2027-02-01",
+          },
+          {
+            id: 3,
+            cycleLabel: "2028",
+            status: "waiting_to_apply",
+            applicationStartDate: "2027-11-01",
+            startDate: "2028-05-01",
+          },
+        ],
+      }),
+    ]);
     assert.deepEqual(
       markers.map((marker) => ({ cycle: marker.cycleLabel, kind: marker.kind })),
       [
@@ -168,28 +163,28 @@ describe("scheduleMarkersFromRows", () => {
     );
   });
 
-  it("still plots a rejected edition with a future con start when interest is positive", () => {
-    const markers = scheduleMarkersFromRows(
-      [
-        convention({
-          id: 1,
-          displayName: "Rejected Con",
-          editions: [
-            {
-              id: 1,
-              cycleLabel: "2027",
-              status: "rejected",
-              applicationStartDate: "2026-01-01",
-              startDate: "2027-06-01",
-            },
-          ],
-        }),
-      ],
-      "2026-11-05",
-    );
+  it("still plots a rejected edition with past and future dates when interest is positive", () => {
+    const markers = scheduleMarkersFromRows([
+      convention({
+        id: 1,
+        displayName: "Rejected Con",
+        editions: [
+          {
+            id: 1,
+            cycleLabel: "2027",
+            status: "rejected",
+            applicationStartDate: "2026-01-01",
+            startDate: "2027-06-01",
+          },
+        ],
+      }),
+    ]);
     assert.deepEqual(
       markers.map((marker) => ({ date: marker.date, kind: marker.kind })),
-      [{ date: "2027-06-01", kind: "event_start" }],
+      [
+        { date: "2026-01-01", kind: "application_start" },
+        { date: "2027-06-01", kind: "event_start" },
+      ],
     );
   });
 });
@@ -212,32 +207,38 @@ describe("year and month helpers", () => {
     assert.equal(cells.filter((cell) => cell.date).length, 30);
     assert.equal(cells.length % 7, 0);
 
-    const markers = scheduleMarkersFromRows(
-      [
-        convention({
-          id: 1,
-          displayName: "A Con",
-          editions: [
-            {
-              id: 1,
-              cycleLabel: "2027",
-              status: "open",
-              applicationStartDate: "2026-11-08",
-              startDate: "2026-12-01",
-            },
-          ],
-        }),
-      ],
-      "2026-11-01",
-    );
+    const markers = scheduleMarkersFromRows([
+      convention({
+        id: 1,
+        displayName: "A Con",
+        editions: [
+          {
+            id: 1,
+            cycleLabel: "2027",
+            status: "open",
+            applicationStartDate: "2026-11-08",
+            startDate: "2026-12-01",
+          },
+        ],
+      }),
+    ]);
     const byDay = markersForMonth(markers, "2026-11");
     assert.equal(byDay.get("2026-11-08")?.length, 1);
     assert.equal(byDay.has("2026-12-01"), false);
   });
 
-  it("detects years entirely before today", () => {
-    assert.equal(isYearEntirelyBefore("2025", "2026-11-05"), true);
-    assert.equal(isYearEntirelyBefore("2026", "2026-11-05"), false);
-    assert.equal(isYearEntirelyBefore("2027", "2026-11-05"), false);
+  it("allows year shifts through gaps and disables only at marker extrema", () => {
+    const markers = [
+      { date: "2024-05-01" },
+      { date: "2027-03-15" },
+    ];
+    assert.equal(canShiftYear(markers, "2027", -1), true);
+    assert.equal(canShiftYear(markers, "2027", 1), false);
+    assert.equal(canShiftYear(markers, "2026", -1), true);
+    assert.equal(canShiftYear(markers, "2026", 1), true);
+    assert.equal(canShiftYear(markers, "2024", -1), false);
+    assert.equal(canShiftYear(markers, "2024", 1), true);
+    assert.equal(canShiftYear([], "2026", -1), false);
+    assert.equal(canShiftYear([], "2026", 1), false);
   });
 });

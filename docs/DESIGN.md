@@ -28,7 +28,7 @@ Rules for every milestone:
 | M4.2 | done | Delete convention and delete edition. |
 | M4.3 | done | Skipped status; no dedicated Skip button. |
 | M4.4 | done | Status-weighted interest from edition statuses plus manual interest. |
-| M4.5 | done | In-app Calendar tab for future dates on interested conventions. |
+| M4.5 | done | In-app Calendar tab for application and event dates on interested conventions. |
 | M4.6 | done | City and state live only on the convention. |
 | M5 | not started | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
@@ -62,7 +62,7 @@ The app replaces that sheet as the place to edit. The sheet is imported once and
 
 - **Cons** is the stable catalog. It uses a compact grid with one tile per convention.
 - **Lineups** is the date-ordered work list of active editions.
-- **Calendar** is a year grid of future application-start and event-start dates for conventions with interest above zero. Application opens are yellow; con starts are green. It is not an alarm and does not create Google Calendar events.
+- **Calendar** is a year grid of application-start and event-start dates for conventions with interest above zero. Application opens are yellow; con starts are green. It is not an alarm and does not create Google Calendar events.
 - **Jobs** is where the owner starts Gmail, website, pasted-text, Discord, or discovery work and later reviews each job's results.
 - **Settings** holds the Google connection and app-wide configuration.
 - **Import** remains a setup tool and is not permanent primary navigation.
@@ -661,7 +661,7 @@ Keep these boundaries. A milestone may add files only in the modules it names.
 | `/` | M4 | Cons grid and sorting. |
 | `/cons/[id]` | M4 | Convention defaults, interest, aliases, saved sources, and editions. |
 | `/lineups` | M4 | Active editions ordered by action date, then Needs dates. |
-| `/calendar` | M4.5 | Year grid of future application-start and event-start dates for interested conventions. |
+| `/calendar` | M4.5 | Year grid of application-start and event-start dates for interested conventions. |
 | `/jobs` | M6 | Submit jobs and browse Queued, Running, Needs review, Done, and Failed groups. |
 | `/jobs/[id]` | M6 | Job evidence, result assignment, apply, dismissal, and retry. |
 | `/import` | M3 | Review ambiguous rows and proposed merges. |
@@ -674,7 +674,7 @@ Empty states use specific, actionable copy:
 
 - no conventions yet: point to import or add;
 - no active editions in Lineups;
-- no future dates for interested conventions on Calendar;
+- no dates for interested conventions on Calendar;
 - no jobs yet, and no jobs in a particular state group;
 - Google not connected; and
 - no saved sources on a con or edition.
@@ -881,22 +881,27 @@ M1–M3 below are preserved as historical records of what was built, including t
 **Deliverables**
 
 - Add a primary **Calendar** nav item and `/calendar` year grid (`?year=YYYY`, default current Los Angeles year). Previous/Next move by one year.
-- Plot future `application_start_date` (**Application opens**, yellow) and `start_date` (**Starts**, green) only for editions whose convention has `conventionInterest` greater than 0.
+- Plot `application_start_date` (**Application opens**, yellow) and `start_date` (**Starts**, green) for editions whose convention has `conventionInterest` greater than 0, including past dates.
 - Omit skipped and withdrawn editions even when the series interest is positive.
-- Omit past dates (before today in `America/Los_Angeles`). Do not plot end dates, application end dates, or result dates.
+- Do not plot end dates, application end dates, or result dates.
+- Emphasize the current Los Angeles year, month, and day. Provide a **Today** control that jumps to the current year and scrolls to the current month.
+- Previous/Next are disabled only when no markers exist before or after the viewed year (empty intermediate years stay reachable).
 - Put marker selection and year/month-grid helpers in pure domain functions with unit tests. Keep Lineups unchanged.
 - Do not create Google Calendar events or in-app alarms.
 
 **Acceptance**
 
-- An interested convention with a future application start and a future event start shows two markers; clicking a marker opens the con page.
-- Zero-interest conventions, skipped/withdrawn editions, and past dates do not appear.
-- Previous year is disabled when that year is entirely before today.
-- Unit tests cover interest cutoff, skipped/withdrawn exclusion, both date kinds, today inclusive, and past dates omitted.
+- An interested convention with an application start and an event start shows two markers; clicking a marker opens the con page.
+- Zero-interest conventions and skipped/withdrawn editions do not appear; past dates do appear.
+- Previous is disabled when no earlier marker year exists; Next is disabled when no later marker year exists.
+- Current year, month, and day are visually distinct; **Today** returns to the current Los Angeles year and month.
+- Unit tests cover interest cutoff, skipped/withdrawn exclusion, both date kinds, past and future dates, and year-range paging at marker extrema.
 
 **Out of scope:** Google OAuth, reminder sync, and Jobs.
 
 **Completion note — 2026-11-05:** `/calendar` year grid with `?year=` paging; `scheduleMarkersFromRows` / `listScheduleMarkers` plot future `application_start_date` (Application opens, yellow) and `start_date` (Starts, green) when `conventionInterest > 0`, omitting skipped/withdrawn editions and past dates. Nav order Cons → Lineups → Calendar → Jobs → Settings. Browser: created M45 Calendar Con (manual interest 2, skipped 2026 with Nov/Dec dates, waiting 2027 opens 2026-11-20 starts 2027-03-15); year view showed Application opens and Starts across months; Previous disabled for prior years; marker opens `/cons/51`. Next agent: M5 Google Calendar reminders.
+
+**Follow-up note — 2026-11-05:** Calendar now plots past dates too. Previous/Next disable only at the ends of the marker year range (`canShiftYear`). Current year/month/day are emphasized; **Today** links to `?year={current}#month-{YYYY-MM}`. Empty-state copy no longer says “future only.” Browser: 2026 showed past May/Aug/Sep markers and filled year chip; Previous disabled on earliest marker year, Next disabled on 2027; November headed “Today” with ringed day 5; Today URL scrolled to `#month-2026-11`. Next agent: M5 Google Calendar reminders.
 
 ### M4.6 — City and state on the convention only
 

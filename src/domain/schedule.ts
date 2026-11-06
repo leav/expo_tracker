@@ -52,14 +52,13 @@ function compareMarkers(a: ScheduleMarker, b: ScheduleMarker): number {
   );
 }
 
-function pushIfFuture(
+function pushIfPresent(
   markers: ScheduleMarker[],
   date: string | null,
   kind: ScheduleKind,
-  today: string,
   base: Omit<ScheduleMarker, "date" | "kind" | "kindLabel">,
 ): void {
-  if (!date || date < today) return;
+  if (!date) return;
   markers.push({
     ...base,
     date,
@@ -68,7 +67,7 @@ function pushIfFuture(
   });
 }
 
-export function scheduleMarkersFromRows(rows: ScheduleConventionRow[], today: string): ScheduleMarker[] {
+export function scheduleMarkersFromRows(rows: ScheduleConventionRow[]): ScheduleMarker[] {
   const markers: ScheduleMarker[] = [];
   for (const convention of rows) {
     const interest = conventionInterest(convention.manualInterest, convention.editions);
@@ -82,14 +81,14 @@ export function scheduleMarkersFromRows(rows: ScheduleConventionRow[], today: st
         cycleLabel: edition.cycleLabel,
         editionId: edition.id,
       };
-      pushIfFuture(markers, edition.applicationStartDate, "application_start", today, base);
-      pushIfFuture(markers, edition.startDate, "event_start", today, base);
+      pushIfPresent(markers, edition.applicationStartDate, "application_start", base);
+      pushIfPresent(markers, edition.startDate, "event_start", base);
     }
   }
   return markers.sort(compareMarkers);
 }
 
-export function listScheduleMarkers(db: TrackerDb, today: string): ScheduleMarker[] {
+export function listScheduleMarkers(db: TrackerDb): ScheduleMarker[] {
   const conventionRows = db
     .select({
       id: conventions.id,
@@ -131,7 +130,6 @@ export function listScheduleMarkers(db: TrackerDb, today: string): ScheduleMarke
       manualInterest: convention.manualInterest,
       editions: byConvention.get(convention.id) ?? [],
     })),
-    today,
   );
 }
 
@@ -159,8 +157,13 @@ export function shiftYear(year: string, delta: number): string {
   return String(Number(year) + delta).padStart(4, "0");
 }
 
-export function isYearEntirelyBefore(year: string, today: string): boolean {
-  return `${year}-12-31` < today;
+export function canShiftYear(
+  markers: Pick<ScheduleMarker, "date">[],
+  year: string,
+  delta: -1 | 1,
+): boolean {
+  if (delta < 0) return markers.some((marker) => marker.date.slice(0, 4) < year);
+  return markers.some((marker) => marker.date.slice(0, 4) > year);
 }
 
 export function formatYearLabel(year: string): string {
