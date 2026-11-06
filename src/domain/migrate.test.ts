@@ -177,3 +177,71 @@ describe("0004 skipped status migration", () => {
     assert.equal(edition.status, "skipped");
   });
 });
+
+describe("0005 edition location on convention migration", () => {
+  let sqlite: Database.Database;
+
+  before(() => {
+    sqlite = new Database(":memory:");
+    sqlite.exec(sqlFile("0000_powerful_lenny_balinger.sql"));
+    sqlite.exec(sqlFile("0001_import_review.sql"));
+    sqlite
+      .prepare(
+        "INSERT INTO convention (display_name, normalized, website, polling_enabled, notes) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run("Empty City Con", "emptycitycon", null, 0, null);
+    sqlite
+      .prepare(
+        "INSERT INTO convention (display_name, normalized, website, polling_enabled, notes) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run("Kept City Con", "keptcitycon", null, 0, null);
+    sqlite
+      .prepare(
+        `INSERT INTO edition (
+          convention_id, cycle_label, start_date, city, region, attendance, intent, status, result_at, paid, notes, sheet_row_key
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(1, "2027", "2027-05-22", "Oakland", "CA", null, "tracking", "not_open", null, 0, null, "Empty 27");
+    sqlite
+      .prepare(
+        `INSERT INTO edition (
+          convention_id, cycle_label, start_date, city, region, attendance, intent, status, result_at, paid, notes, sheet_row_key
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(2, "2027", "2027-06-01", "Berkeley", "CA", null, "tracking", "not_open", null, 0, null, "Kept 27");
+    sqlite.exec(sqlFile("0002_core_workspace.sql"));
+    sqlite.exec(sqlFile("0003_city_state_only.sql"));
+    sqlite.exec(sqlFile("0004_skipped_status.sql"));
+    // 0002 seeds defaults from editions; clear one so 0005 backfill can be checked.
+    sqlite.prepare("UPDATE convention SET default_city = NULL, default_region = NULL WHERE id = 1").run();
+    sqlite
+      .prepare("UPDATE convention SET default_city = ?, default_region = ? WHERE id = 2")
+      .run("San Jose", "CA");
+    sqlite.exec(sqlFile("0005_edition_location_on_con.sql"));
+  });
+
+  after(() => {
+    sqlite.close();
+  });
+
+  it("backfills empty convention location, keeps existing, and drops edition columns", () => {
+    const empty = sqlite.prepare("SELECT default_city, default_region FROM convention WHERE id = 1").get() as {
+      default_city: string | null;
+      default_region: string | null;
+    };
+    const kept = sqlite.prepare("SELECT default_city, default_region FROM convention WHERE id = 2").get() as {
+      default_city: string | null;
+      default_region: string | null;
+    };
+    const editionColumns = (sqlite.prepare("PRAGMA table_info(edition)").all() as { name: string }[]).map(
+      (column) => column.name,
+    );
+
+    assert.equal(empty.default_city, "Oakland");
+    assert.equal(empty.default_region, "CA");
+    assert.equal(kept.default_city, "San Jose");
+    assert.equal(kept.default_region, "CA");
+    assert.equal(editionColumns.includes("city"), false);
+    assert.equal(editionColumns.includes("region"), false);
+  });
+});

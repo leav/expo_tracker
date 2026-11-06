@@ -7,8 +7,10 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "../db/schema";
 import { editions } from "../db/schema";
 import { createConvention, updateConvention } from "./conventions";
+import { listCons } from "./cons";
 import type { TrackerDb } from "./db";
 import { createEdition, setEditionPaid, updateEdition } from "./editions";
+import { listLineups } from "./lineups";
 import { initialStatus, todayInLosAngeles } from "./status";
 
 describe("edition writes", () => {
@@ -26,7 +28,7 @@ describe("edition writes", () => {
     sqlite.close();
   });
 
-  it("copies convention location into a new edition and infers waiting_to_apply", () => {
+  it("keeps location on the convention and infers waiting_to_apply", () => {
     const convention = createConvention(db, {
       displayName: "FanimeCon",
       website: null,
@@ -45,8 +47,6 @@ describe("edition writes", () => {
       endDate: null,
       applicationStartDate: "2026-11-08",
       applicationEndDate: null,
-      city: null,
-      region: null,
       status: "unknown",
       submittedAt: null,
       resultDate: null,
@@ -58,11 +58,15 @@ describe("edition writes", () => {
 
     const stored = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
     assert.equal(stored?.status, initialStatus("2026-11-08", todayInLosAngeles()));
-    assert.equal(stored?.city, "San Jose");
-    assert.equal(stored?.region, "CA");
+    assert.equal("city" in (stored ?? {}), false);
+    assert.equal("region" in (stored ?? {}), false);
     assert.equal(stored?.paid, false);
     assert.equal("attendance" in (stored ?? {}), false);
     assert.equal("intent" in (stored ?? {}), false);
+
+    const tilesBefore = listCons(db, "name", todayInLosAngeles());
+    const fanimeBefore = tilesBefore.find((tile) => tile.conventionId === convention.value.id);
+    assert.equal(fanimeBefore?.locationLabel, "San Jose, CA");
 
     const updated = updateConvention(db, {
       id: convention.value.id,
@@ -74,8 +78,28 @@ describe("edition writes", () => {
       estimatedAttendance: 27500,
     });
     assert.equal(updated.ok, true);
-    const afterConventionEdit = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
-    assert.equal(afterConventionEdit?.city, "San Jose");
+
+    const tilesAfter = listCons(db, "name", todayInLosAngeles());
+    const fanimeAfter = tilesAfter.find((tile) => tile.conventionId === convention.value.id);
+    assert.equal(fanimeAfter?.locationLabel, "San Francisco, CA");
+
+    const waiting = updateEdition(db, created.value.id, {
+      conventionId: convention.value.id,
+      cycleLabel: "2027",
+      startDate: "2027-05-22",
+      endDate: null,
+      applicationStartDate: "2026-11-08",
+      applicationEndDate: null,
+      status: "waiting_to_apply",
+      submittedAt: null,
+      resultDate: null,
+      paid: false,
+      notes: null,
+    });
+    assert.equal(waiting.ok, true);
+    const { dated } = listLineups(db);
+    const lineup = dated.find((item) => item.editionId === created.value.id);
+    assert.equal(lineup?.city, "San Francisco");
 
     const skipped = updateEdition(db, created.value.id, {
       conventionId: convention.value.id,
@@ -84,8 +108,6 @@ describe("edition writes", () => {
       endDate: null,
       applicationStartDate: "2026-11-08",
       applicationEndDate: null,
-      city: "San Jose",
-      region: "CA",
       status: "skipped",
       submittedAt: null,
       resultDate: null,

@@ -19,8 +19,6 @@ function editionInput(conventionId: number, cycleLabel: string) {
     endDate: null,
     applicationStartDate: null,
     applicationEndDate: null,
-    city: null,
-    region: null,
     status: "unknown" as const,
     submittedAt: null,
     resultDate: null,

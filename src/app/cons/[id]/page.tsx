@@ -38,8 +38,7 @@ export default async function ConsDetailPage({
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">{convention.displayName}</h1>
         <p className="text-sm text-muted-foreground">
-          Interest {series.interest} from manual {convention.manualInterest} plus edition statuses. Defaults copy into
-          new editions.
+          Interest {series.interest} from manual {convention.manualInterest} plus edition statuses.
         </p>
       </header>
       {query.error ? (
@@ -56,8 +55,8 @@ export default async function ConsDetailPage({
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Name" name="displayName" defaultValue={convention.displayName} required />
             <Field label="Website" name="website" defaultValue={convention.website ?? ""} />
-            <Field label="Default city" name="defaultCity" defaultValue={convention.defaultCity ?? ""} />
-            <Field label="Default state" name="defaultRegion" defaultValue={convention.defaultRegion ?? ""} />
+            <Field label="City" name="defaultCity" defaultValue={convention.defaultCity ?? ""} />
+            <Field label="State" name="defaultRegion" defaultValue={convention.defaultRegion ?? ""} />
             <Field
               label="Estimated attendance"
               name="estimatedAttendance"
@@ -135,7 +134,7 @@ export default async function ConsDetailPage({
       <section className="grid gap-4">
         <h2 className="text-lg font-medium">Editions</h2>
         {series.editions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No editions yet. Add the first cycle below. Location defaults copy in.</p>
+          <p className="text-sm text-muted-foreground">No editions yet. Add the first cycle below.</p>
         ) : null}
         {series.editions.map((edition) => (
           <EditionForm key={edition.id} edition={edition} />
@@ -180,8 +179,6 @@ function EditionForm({
           <Field label="Event end" name="endDate" type="date" defaultValue={edition.endDate ?? ""} />
           <Field label="Submitted" name="submittedAt" type="date" defaultValue={edition.submittedAt ?? ""} />
           <Field label="Result" name="resultDate" type="date" defaultValue={edition.resultDate ?? ""} />
-          <Field label="City" name="city" defaultValue={edition.city ?? ""} />
-          <Field label="State" name="region" defaultValue={edition.region ?? ""} />
         </div>
         <label className="grid gap-1 text-sm">
           Notes

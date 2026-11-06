@@ -63,7 +63,6 @@ export function listLineups(db: TrackerDb): { dated: LineupItem[]; needsDates: L
       applicationStartDate: editions.applicationStartDate,
       resultDate: editions.resultDate,
       startDate: editions.startDate,
-      city: editions.city,
       defaultCity: conventions.defaultCity,
     })
     .from(editions)
@@ -81,7 +80,7 @@ export function listLineups(db: TrackerDb): { dated: LineupItem[]; needsDates: L
       status: row.status,
       statusLabel: statusLabels[row.status],
       actionDate: lineupsActionDate(row),
-      city: row.city ?? row.defaultCity,
+      city: row.defaultCity,
     });
   }
   return partitionLineups(items);

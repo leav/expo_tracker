@@ -250,8 +250,6 @@ function writeRow(
     endDate: null,
     applicationStartDate: dates.applicationStartDate,
     applicationEndDate: dates.applicationEndDate,
-    city: row.city,
-    region: null,
     status,
     submittedAt: dates.submittedAt,
     resultDate: dates.resultDate,

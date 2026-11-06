@@ -37,8 +37,6 @@ export const editions = sqliteTable(
     applicationEndDate: text("application_end_date"),
     startDateCalendarEventId: text("start_date_calendar_event_id"),
     applicationStartDateCalendarEventId: text("application_start_date_calendar_event_id"),
-    city: text("city"),
-    region: text("region"),
     status: text("status").notNull(),
     submittedAt: text("submitted_at"),
     resultDate: text("result_date"),

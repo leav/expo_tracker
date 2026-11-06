@@ -13,8 +13,6 @@ export type RepresentativeEdition = {
   cycleLabel: string;
   startDate: string | null;
   status: Status;
-  city: string | null;
-  region: string | null;
 };
 
 export type ConsTile = {
@@ -147,8 +145,8 @@ export function listCons(db: TrackerDb, sort: ConsSortKey, today: string): ConsT
     const ownEditions = editionsByConvention.get(convention.id) ?? [];
     const representative = pickRepresentativeEdition(ownEditions, today);
     const status = representative && isStatus(representative.status) ? representative.status : null;
-    const city = representative?.city ?? convention.defaultCity;
-    const region = representative?.region ?? convention.defaultRegion;
+    const city = convention.defaultCity;
+    const region = convention.defaultRegion;
     const interest = conventionInterest(convention.manualInterest, ownEditions);
     return {
       conventionId: convention.id,
@@ -183,7 +181,5 @@ export function representativeForConvention(
     cycleLabel: picked.cycleLabel,
     startDate: picked.startDate,
     status: picked.status,
-    city: picked.city,
-    region: picked.region,
   };
 }

@@ -19,8 +19,6 @@ export type EditionInput = {
   endDate: string | null;
   applicationStartDate: string | null;
   applicationEndDate: string | null;
-  city: string | null;
-  region: string | null;
   status: Status;
   submittedAt: string | null;
   resultDate: string | null;
@@ -59,8 +57,6 @@ export function editionInputFromForm(form: FormData, conventionId: number): Edit
     endDate,
     applicationStartDate,
     applicationEndDate,
-    city: blankToNull(form.get("city")),
-    region: blankToNull(form.get("region")),
     status: statusValue,
     submittedAt,
     resultDate,
@@ -69,60 +65,40 @@ export function editionInputFromForm(form: FormData, conventionId: number): Edit
   };
 }
 
-function locationFromConvention(
-  db: TrackerDb,
-  conventionId: number,
-  input: EditionInput,
-): DomainResult<EditionInput> {
-  const convention = db.select().from(conventions).where(eq(conventions.id, conventionId)).get();
-  if (!convention) return { ok: false, error: "That convention is gone." };
-  return {
-    ok: true,
-    value: {
-      ...input,
-      city: input.city ?? convention.defaultCity,
-      region: input.region ?? convention.defaultRegion,
-    },
-  };
-}
-
 export function createEdition(db: TrackerDb, input: EditionInput): DomainResult<{ id: number }> {
-  const withLocation = locationFromConvention(db, input.conventionId, input);
-  if (!withLocation.ok) return withLocation;
-  const values = withLocation.value;
+  const convention = db.select().from(conventions).where(eq(conventions.id, input.conventionId)).get();
+  if (!convention) return { ok: false, error: "That convention is gone." };
 
   const duplicate = db
     .select({ cycleLabel: editions.cycleLabel })
     .from(editions)
-    .where(eq(editions.conventionId, values.conventionId))
+    .where(eq(editions.conventionId, input.conventionId))
     .all()
-    .some((row) => row.cycleLabel === values.cycleLabel);
-  if (duplicate) return { ok: false, error: `Cycle ${values.cycleLabel} is already on this convention.` };
+    .some((row) => row.cycleLabel === input.cycleLabel);
+  if (duplicate) return { ok: false, error: `Cycle ${input.cycleLabel} is already on this convention.` };
 
   const status =
-    values.inferInitialStatus === false
-      ? values.status
-      : values.status === "unknown"
-        ? initialStatus(values.applicationStartDate, todayInLosAngeles())
-        : values.status;
+    input.inferInitialStatus === false
+      ? input.status
+      : input.status === "unknown"
+        ? initialStatus(input.applicationStartDate, todayInLosAngeles())
+        : input.status;
 
   const inserted = db
     .insert(editions)
     .values({
-      conventionId: values.conventionId,
-      cycleLabel: values.cycleLabel,
-      startDate: values.startDate,
-      endDate: values.endDate,
-      applicationStartDate: values.applicationStartDate,
-      applicationEndDate: values.applicationEndDate,
-      city: values.city,
-      region: values.region,
-      submittedAt: values.submittedAt,
-      resultDate: values.resultDate,
-      notes: values.notes,
+      conventionId: input.conventionId,
+      cycleLabel: input.cycleLabel,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      applicationStartDate: input.applicationStartDate,
+      applicationEndDate: input.applicationEndDate,
+      submittedAt: input.submittedAt,
+      resultDate: input.resultDate,
+      notes: input.notes,
       status,
-      paid: isPaidStatus(status) ? values.paid : false,
-      sheetRowKey: values.sheetRowKey ?? null,
+      paid: isPaidStatus(status) ? input.paid : false,
+      sheetRowKey: input.sheetRowKey ?? null,
     })
     .returning({ id: editions.id })
     .get();
@@ -154,8 +130,6 @@ export function updateEdition(
       endDate: input.endDate,
       applicationStartDate: input.applicationStartDate,
       applicationEndDate: input.applicationEndDate,
-      city: input.city,
-      region: input.region,
       submittedAt: input.submittedAt,
       resultDate: input.resultDate,
       notes: input.notes,
@@ -239,8 +213,6 @@ export function importEdition(db: TrackerDb, input: EditionInput & { sheetRowKey
       endDate: fillIfEmpty(existing.endDate, input.endDate),
       applicationStartDate: fillIfEmpty(existing.applicationStartDate, input.applicationStartDate),
       applicationEndDate: fillIfEmpty(existing.applicationEndDate, input.applicationEndDate),
-      city: fillIfEmpty(existing.city, input.city),
-      region: fillIfEmpty(existing.region, input.region),
       submittedAt: fillIfEmpty(existing.submittedAt, input.submittedAt),
       resultDate: fillIfEmpty(existing.resultDate, input.resultDate),
       notes: fillIfEmpty(existing.notes, input.notes),

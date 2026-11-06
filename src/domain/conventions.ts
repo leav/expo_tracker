@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { aliases, conventions, editions } from "../db/schema";
+import { aliases, conventions } from "../db/schema";
 import { pickAttendanceValue, pickRepresentativeEdition } from "./cons";
 import type { DomainResult, TrackerDb } from "./db";
 import { resolveDriveTime, seedDriveMinutes } from "./driveTime";
@@ -181,22 +181,14 @@ export function fillConventionFromImport(
   db.update(conventions).set(updates).where(eq(conventions.id, conventionId)).run();
 }
 
-export function seedEmptyConventionDefaults(db: TrackerDb, conventionId: number, today = todayInLosAngeles()): void {
+export function seedEmptyConventionDefaults(db: TrackerDb, conventionId: number): void {
   const current = db.select().from(conventions).where(eq(conventions.id, conventionId)).get();
   if (!current) return;
-  const editionRows = db.select().from(editions).where(eq(editions.conventionId, conventionId)).all();
-  const representative = pickRepresentativeEdition(editionRows, today);
-  if (!representative) return;
-  const updates: Partial<typeof conventions.$inferInsert> = {};
-  if (!current.defaultCity && representative.city) updates.defaultCity = representative.city;
-  if (!current.defaultRegion && representative.region) updates.defaultRegion = representative.region;
-  if (current.driveSource !== "manual" && current.driveMinutes == null) {
-    const seeded = seedDriveMinutes((updates.defaultCity ?? current.defaultCity) as string | null);
-    if (seeded != null) {
-      updates.driveMinutes = seeded;
-      updates.driveSource = "seed";
-    }
-  }
-  if (Object.keys(updates).length === 0) return;
-  db.update(conventions).set(updates).where(eq(conventions.id, conventionId)).run();
+  if (current.driveSource === "manual" || current.driveMinutes != null) return;
+  const seeded = seedDriveMinutes(current.defaultCity);
+  if (seeded == null) return;
+  db.update(conventions)
+    .set({ driveMinutes: seeded, driveSource: "seed" })
+    .where(eq(conventions.id, conventionId))
+    .run();
 }

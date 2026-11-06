@@ -29,6 +29,7 @@ Rules for every milestone:
 | M4.3 | done | Skipped status; no dedicated Skip button. |
 | M4.4 | done | Status-weighted interest from edition statuses plus manual interest. |
 | M4.5 | done | In-app Calendar tab for future dates on interested conventions. |
+| M4.6 | done | City and state live only on the convention. |
 | M5 | not started | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
 | M7 | not started | Manually started Gmail scan jobs. |
@@ -206,7 +207,7 @@ The stable series. For example, FanimeCon 2026 and FanimeCon 2027 belong to one 
 | --- | --- |
 | id, display_name, normalized | Display name is preserved. `normalized` is its match key. |
 | website | Stable site, not a one-year form URL. |
-| default_city, default_region | Reusable city and state for new editions. The UI labels `default_region` as State. |
+| default_city, default_region | The convention's city and state. The UI labels them City and State. |
 | estimated_attendance | One convention-level expected crowd size. Null when unknown. Import strips commas and a trailing plus: `27,500` is 27500, `1,000+` is 1000, `Unknown` is null. |
 | manual_interest | Signed integer, default `0`. |
 | drive_minutes | Cached estimated driving time from San Mateo. Null means unknown. |
@@ -227,7 +228,7 @@ Each Cons tile summarizes one edition:
 
 Break equal-date edition ties by `cycle_label`. A convention with no editions still has a tile and shows **No editions**.
 
-The tile shows convention name, summarized event date, summarized status, and city/region. Use the summarized edition's city/region, falling back to convention defaults when either is empty. A con with no edition uses convention defaults and has no event date or status.
+The tile shows convention name, summarized event date, summarized status, and city/region from the convention. A con with no edition still shows its city and state and has no event date or status.
 
 Cons supports four sorts. Convention name ascending is the final tie-breaker for every sort:
 
@@ -291,7 +292,6 @@ One occurrence of a convention. Example cycle labels are `2027`, `2027-winter`, 
 | application_start_reminder_enabled | True only after the owner explicitly adds the application-start reminder. |
 | start_date_calendar_event_id | Google event id for `start_date`. Null until created. |
 | application_start_date_calendar_event_id | Google event id for `application_start_date`. Null until created. |
-| city, region | Historical city and state snapshot copied from convention defaults on creation, then independently editable. The UI labels `region` as State. |
 | status | See the status vocabulary. |
 | submitted_at, result_date | Dates. `result_date` is expected while Submitted/Waitlisted and actual after a decision. |
 | paid | The owner toggles this on an Approved or Attended edition. No job sets it. |
@@ -897,6 +897,27 @@ M1–M3 below are preserved as historical records of what was built, including t
 **Out of scope:** Google OAuth, reminder sync, and Jobs.
 
 **Completion note — 2026-11-05:** `/calendar` year grid with `?year=` paging; `scheduleMarkersFromRows` / `listScheduleMarkers` plot future `application_start_date` (Application opens, yellow) and `start_date` (Starts, green) when `conventionInterest > 0`, omitting skipped/withdrawn editions and past dates. Nav order Cons → Lineups → Calendar → Jobs → Settings. Browser: created M45 Calendar Con (manual interest 2, skipped 2026 with Nov/Dec dates, waiting 2027 opens 2026-11-20 starts 2027-03-15); year view showed Application opens and Starts across months; Previous disabled for prior years; marker opens `/cons/51`. Next agent: M5 Google Calendar reminders.
+
+### M4.6 — City and state on the convention only
+
+**Deliverables**
+
+- Drop `city` and `region` from editions. Location lives only on `default_city` / `default_region` on the convention.
+- Migrate existing databases with schema `0005`: backfill empty convention city/state from any edition that still has a value, then drop the edition columns. Do not overwrite a convention that already has location.
+- Cons tiles and Lineups read city/state from the convention. Edition forms no longer expose location fields.
+- Import still fills empty convention city from the sheet's 地点 column; it does not write location onto editions.
+- Label convention fields City and State (not Default city / Default state).
+
+**Acceptance**
+
+- Convention forms expose city and state; edition forms do not.
+- Creating or editing an edition never stores or changes location.
+- Changing the convention city updates Cons tiles and Lineups for every edition of that series.
+- Migration preserves convention location, fills empty conventions from edition snapshots when needed, and removes edition `city` / `region`.
+
+**Out of scope:** Calendar, Jobs, discovery, and renaming the `default_*` columns.
+
+**Completion note — 2026-11-05:** Schema `0005` backfills empty convention city/state from edition snapshots, then drops edition `city`/`region`. Cons and Lineups read location from the convention only. Edition create/update/import no longer touch location; con detail labels City/State. Browser: added M46 Location Con (Oakland, CA), edition 2027 with application start 2026-12-01 (no edition location fields), changed city to Berkeley → Cons tile `Berkeley, CA` and Lineups `Berkeley`. Live DB had never applied `0003`, so orphan `venue`/`address`/`postal_code`/`country` columns may remain on `edition` (ignored by the schema). Next agent: M5 Google Calendar reminders.
 
 ### M5 — Manual Calendar reminders
 
