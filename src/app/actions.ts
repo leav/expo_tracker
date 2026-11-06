@@ -17,6 +17,8 @@ import {
   updateEdition,
 } from "../domain/editions";
 import { blankToNull, isError, parseAttendance, parseOptionalMinutes, parseSignedInteger } from "../domain/fields";
+import { listLineups, moveLineupEdition, type LineupBoard } from "../domain/lineups";
+import { isStatus, todayInLosAngeles } from "../domain/status";
 import { openDatabase } from "../db";
 import { revalidateWorkspace } from "./revalidate";
 
@@ -126,4 +128,18 @@ export async function setPaidAction(form: FormData) {
   const next = String(form.get("returnTo") ?? "/");
   if (!result.ok) fail(next, result);
   redirect(next);
+}
+
+export async function moveLineupEditionAction(
+  editionId: number,
+  status: string,
+): Promise<{ ok: true; board: LineupBoard } | { ok: false; error: string }> {
+  const id = Number(editionId);
+  if (!Number.isInteger(id)) return { ok: false, error: "That edition is gone." };
+  if (!isStatus(status)) return { ok: false, error: "Choose a status from the list." };
+  const db = openDatabase();
+  const result = moveLineupEdition(db, id, status);
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidateWorkspace(result.value.conventionId);
+  return { ok: true, board: listLineups(db, todayInLosAngeles()) };
 }

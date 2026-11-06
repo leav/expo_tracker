@@ -10,6 +10,7 @@ import {
   updateEditionAction,
 } from "../../actions";
 import { ConfirmForm } from "../../../components/confirm-form";
+import { InterestHearts } from "../../../components/interest-hearts";
 import { Button } from "../../../components/ui/button";
 import { interestStatusCounts } from "../../../domain/cons";
 import { getSeries } from "../../../domain/editions";
@@ -37,8 +38,27 @@ export default async function ConsDetailPage({
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
-      <header>
+      <header className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">{convention.displayName}</h1>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+          <span>Interest Score</span>
+          <InterestHearts score={series.interest} />
+          <span>=</span>
+          <input
+            form={`save-convention-${convention.id}`}
+            name="manualInterest"
+            type="text"
+            inputMode="numeric"
+            defaultValue={convention.manualInterest.toString()}
+            aria-label="Manual interest"
+            className="h-9 w-16 rounded-md border border-input bg-background px-2 text-center"
+          />
+          {statusCounts.map((item) => (
+            <span key={item.status}>
+              {item.contribution > 0 ? "+" : "-"} {item.count} {item.label}
+            </span>
+          ))}
+        </div>
       </header>
       {query.error ? (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">{query.error}</p>
@@ -71,22 +91,6 @@ export default async function ConsDetailPage({
                   : "City estimate"
               }
             />
-          </div>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-            <span>Interest Score: {series.interest} =</span>
-            <input
-              name="manualInterest"
-              type="text"
-              inputMode="numeric"
-              defaultValue={convention.manualInterest.toString()}
-              aria-label="Manual interest"
-              className="h-9 w-16 rounded-md border border-input bg-background px-2 text-center"
-            />
-            {statusCounts.map((item) => (
-              <span key={item.status}>
-                {item.contribution > 0 ? "+" : "-"} {item.count} {item.label}
-              </span>
-            ))}
           </div>
           <label className="grid gap-1 text-sm">
             Notes
@@ -180,7 +184,7 @@ function EditionForm({
   const showPaid = isPaidStatus(status);
   const saveFormId = `save-edition-${edition.id}`;
   return (
-    <div className="grid gap-3 rounded-lg border bg-card p-4">
+    <div id={`edition-${edition.id}`} className="grid scroll-mt-6 gap-3 rounded-lg border bg-card p-4">
       <form id={saveFormId} action={updateEditionAction} className="grid gap-3">
         <input type="hidden" name="conventionId" value={edition.conventionId} />
         <input type="hidden" name="editionId" value={edition.id} />

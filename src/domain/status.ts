@@ -34,6 +34,8 @@ export const lineupStatuses = [
   "approved",
 ] as const satisfies readonly Status[];
 
+export type LineupStatus = (typeof lineupStatuses)[number];
+
 const lineupStatusSet = new Set<Status>(lineupStatuses);
 const paidStatusSet = new Set<Status>(["approved", "attended"]);
 const decisionStatusSet = new Set<Status>([

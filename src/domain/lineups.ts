@@ -1,87 +1,94 @@
 import { eq } from "drizzle-orm";
 import { conventions, editions } from "../db/schema";
-import { compareCycleLabels } from "./cycles";
-import type { TrackerDb } from "./db";
-import { isLineupStatus, isStatus, statusLabels, type Status } from "./status";
+import { conventionInterest } from "./cons";
+import type { DomainResult, TrackerDb } from "./db";
+import {
+  canMoveLineupStatus,
+  groupLineups,
+  presentLineupItem,
+  type LineupBoard,
+  type LineupItem,
+} from "./lineupBoard";
+import { isLineupStatus, isStatus, type Status } from "./status";
 
-export type LineupItem = {
-  editionId: number;
-  conventionId: number;
-  conventionName: string;
-  cycleLabel: string;
-  status: Status;
-  statusLabel: string;
-  actionDate: string | null;
-  city: string | null;
-};
+export {
+  addCalendarDays,
+  applyLineupMove,
+  canMoveLineupStatus,
+  compareLineupItems,
+  formatLineupDate,
+  groupLineups,
+  lineupDateLabel,
+  lineupDescriptor,
+  presentLineupItem,
+  relativeDayLabel,
+  type LineupBoard,
+  type LineupColumn,
+  type LineupDescriptor,
+  type LineupItem,
+  type LineupSource,
+} from "./lineupBoard";
 
-export function lineupsActionDate(input: {
-  status: Status;
-  applicationStartDate: string | null;
-  resultDate: string | null;
-  startDate: string | null;
-}): string | null {
-  switch (input.status) {
-    case "waiting_to_apply":
-    case "open":
-      return input.applicationStartDate;
-    case "submitted":
-    case "waitlisted":
-      return input.resultDate ?? input.startDate;
-    case "approved":
-      return input.startDate;
-    default:
-      return null;
+export function listLineups(db: TrackerDb, today: string): LineupBoard {
+  const conventionRows = db.select().from(conventions).all();
+  const editionRows = db.select().from(editions).all();
+  const editionsByConvention = new Map<number, typeof editionRows>();
+  for (const row of editionRows) {
+    const list = editionsByConvention.get(row.conventionId) ?? [];
+    list.push(row);
+    editionsByConvention.set(row.conventionId, list);
   }
-}
-
-export function partitionLineups(items: LineupItem[]): { dated: LineupItem[]; needsDates: LineupItem[] } {
-  const dated = items
-    .filter((item) => item.actionDate)
-    .sort(
-      (a, b) =>
-        (a.actionDate ?? "").localeCompare(b.actionDate ?? "") ||
-        a.conventionName.localeCompare(b.conventionName) ||
-        compareCycleLabels(a.cycleLabel, b.cycleLabel),
-    );
-  const needsDates = items
-    .filter((item) => !item.actionDate)
-    .sort(
-      (a, b) => a.conventionName.localeCompare(b.conventionName) || compareCycleLabels(a.cycleLabel, b.cycleLabel),
-    );
-  return { dated, needsDates };
-}
-
-export function listLineups(db: TrackerDb): { dated: LineupItem[]; needsDates: LineupItem[] } {
-  const rows = db
-    .select({
-      editionId: editions.id,
-      conventionId: editions.conventionId,
-      conventionName: conventions.displayName,
-      cycleLabel: editions.cycleLabel,
-      status: editions.status,
-      applicationStartDate: editions.applicationStartDate,
-      resultDate: editions.resultDate,
-      startDate: editions.startDate,
-      defaultCity: conventions.defaultCity,
-    })
-    .from(editions)
-    .innerJoin(conventions, eq(editions.conventionId, conventions.id))
-    .all();
+  const conventionById = new Map(conventionRows.map((row) => [row.id, row]));
 
   const items: LineupItem[] = [];
-  for (const row of rows) {
+  for (const row of editionRows) {
     if (!isStatus(row.status) || !isLineupStatus(row.status)) continue;
-    items.push({
-      editionId: row.editionId,
-      conventionId: row.conventionId,
-      conventionName: row.conventionName,
-      cycleLabel: row.cycleLabel,
-      status: row.status,
-      statusLabel: statusLabels[row.status],
-      actionDate: lineupsActionDate(row),
-      city: row.defaultCity,
-    });
+    const convention = conventionById.get(row.conventionId);
+    if (!convention) continue;
+    const presented = presentLineupItem(
+      {
+        editionId: row.id,
+        conventionId: row.conventionId,
+        conventionName: convention.displayName,
+        cycleLabel: row.cycleLabel,
+        status: row.status,
+        applicationStartDate: row.applicationStartDate,
+        applicationEndDate: row.applicationEndDate,
+        resultDate: row.resultDate,
+        startDate: row.startDate,
+        city: convention.defaultCity,
+        region: convention.defaultRegion,
+        interest: conventionInterest(convention.manualInterest, editionsByConvention.get(row.conventionId) ?? []),
+      },
+      today,
+    );
+    if (presented) items.push(presented);
   }
-  return partitionLineups(items);
+
+  const columns = groupLineups(items);
+  return { columns, total: items.length };
+}
+
+export function moveLineupEdition(
+  db: TrackerDb,
+  editionId: number,
+  toStatus: Status,
+): DomainResult<{ id: number; conventionId: number; status: Status }> {
+  const current = db.select().from(editions).where(eq(editions.id, editionId)).get();
+  if (!current) return { ok: false, error: "That edition is gone." };
+  if (!isStatus(current.status) || !isLineupStatus(current.status)) {
+    return { ok: false, error: "Only Lineups editions can be moved on this board." };
+  }
+  if (current.status === toStatus) {
+    return { ok: true, value: { id: current.id, conventionId: current.conventionId, status: current.status } };
+  }
+  if (!canMoveLineupStatus(current.status, toStatus)) {
+    if (toStatus === "attended" || toStatus === "withdrawn") {
+      return { ok: false, error: "Attended and Withdrawn are only for Approved editions." };
+    }
+    return { ok: false, error: "Drop that edition on a Lineups column." };
+  }
+
+  db.update(editions).set({ status: toStatus }).where(eq(editions.id, editionId)).run();
+  return { ok: true, value: { id: current.id, conventionId: current.conventionId, status: toStatus } };
 }

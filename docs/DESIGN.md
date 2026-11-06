@@ -30,6 +30,7 @@ Rules for every milestone:
 | M4.4 | done | Status-weighted interest from edition statuses plus manual interest. |
 | M4.5 | done | In-app Calendar tab for application and event dates on interested conventions. |
 | M4.6 | done | City and state live only on the convention. |
+| M4.7 | done | Time-centric Lineups board with drag-and-drop status moves. |
 | M5 | not started | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
 | M7 | not started | Manually started Gmail scan jobs. |
@@ -61,7 +62,7 @@ The app replaces that sheet as the place to edit. The sheet is imported once and
 ### Primary views
 
 - **Cons** is the stable catalog. It uses a compact grid with one tile per convention.
-- **Lineups** is the date-ordered work list of active editions.
+- **Lineups** is a five-column board of active editions, grouped by status and ordered by each column's action date.
 - **Calendar** is a year grid of application-start and event-start dates for conventions with interest above zero. Application opens are yellow; con starts are green. It is not an alarm and does not create Google Calendar events.
 - **Jobs** is where the owner starts Gmail, website, pasted-text, Discord, or discovery work and later reviews each job's results.
 - **Settings** holds the Google connection and app-wide configuration.
@@ -237,7 +238,7 @@ Cons supports four sorts. Convention name ascending is the final tie-breaker for
 - **Time:** summarized start month from January through December, ignoring year, with unknown values last.
 - **Name:** display name ascending.
 
-The grid tile uses interest as a color cue. Clamp the computed total to `-5…+5` for color only: `-5` is red, `0` is neutral, and `+5` is green. Do not show the number visibly in the grid. Include it in the tile's accessible name. On the con detail form, show the unclamped total as an equation with the editable manual interest input and grouped edition status counts (for example, `Interest Score: 2 = [2] + 1 attended - 1 skipped`).
+The grid tile uses interest as a color cue. Clamp the computed total to `-5…+5` for color only: `-5` is red, `0` is neutral, and `+5` is green. Do not show the number visibly in the grid. Include it in the tile's accessible name. On the con detail page, place the unclamped total under the convention name as an equation with hearts, the editable manual interest input, and grouped edition status counts (for example, `Interest Score ❤️❤️❤️ = [2] + 1 submitted`). Show one ❤️ per positive interest point, one 💔 per negative point, and none at zero.
 
 ### Alias
 
@@ -380,17 +381,19 @@ An edition has one lifecycle status. There is no separate intent field.
 | Status       | UI label         | Meaning                                         | Lineups action date                         | Interest |
 | ------------ | ---------------- | ----------------------------------------------- | ------------------------------------------- | -------- |
 | `unknown`    | Unknown          | No reliable application state yet.              | Excluded.                                   | `0` |
-| `waiting_to_apply` | Waiting to apply | Owner is actively waiting for applications to open. | Application start; otherwise Needs dates. | `+1` |
-| `open`       | Ready to apply   | Window is open and the owner has not submitted. | Application start, including overdue dates. | `+1` |
-| `submitted`  | Submitted        | Owner applied and awaits a result.              | Result date, falling back to con start.     | `+1` |
-| `waitlisted` | Waitlisted       | Owner is on the waitlist.                       | Result date, falling back to con start.     | `+1` |
-| `approved`   | Approved         | Application was approved.                       | Con start.                                  | `+1` |
-| `attended`   | Attended         | Owner went. Set by hand. No job sets it.        | Excluded.                                   | `+1` |
+| `waiting_to_apply` | Waiting to apply | Owner is actively waiting for applications to open. | Application start. Missing dates sort first as Date not set. | `+1` |
+| `open`       | Ready to apply   | Window is open and the owner has not submitted. | Application end. If missing, application start plus 7 days, labeled estimated. | `+1` |
+| `submitted`  | Submitted        | Owner applied and awaits a result.              | Result date. Missing dates sort first as Date not set. | `+1` |
+| `waitlisted` | Waitlisted       | Owner is on the waitlist.                       | Event start. Missing dates sort first as Date not set. | `+1` |
+| `approved`   | Approved         | Application was approved.                       | Event start. Missing dates sort first as Date not set. | `+1` |
+| `attended`   | Attended         | Owner went. Set by hand. No job sets it.        | Excluded. Reachable by dragging Approved onto Attended. | `+1` |
 | `rejected`   | Rejected         | Application was rejected.                       | Excluded.                                   | `+1` |
-| `withdrawn`  | Withdrawn        | Owner backed out.                               | Excluded.                                   | `0` |
+| `withdrawn`  | Withdrawn        | Owner backed out.                               | Excluded. Reachable by dragging Approved onto Withdrawn. | `0` |
 | `skipped`    | Skipped          | Owner decided not to apply.                     | Excluded.                                   | `-1` |
 
-Lineups contains `waiting_to_apply`, `open`, `submitted`, `waitlisted`, and `approved`. Dated rows sort by action date ascending, then convention name, then cycle label. Undated active rows appear afterward in **Needs dates**. An overdue Approved row remains until the owner marks it Attended or Withdrawn.
+Lineups is a five-column board of `waiting_to_apply`, `open`, `submitted`, `waitlisted`, and `approved`. Each column keeps **Date not set** cards first, then sorts by that column's date ascending, then convention name, then cycle label. Cards lead with the named date (`Applications open 11/06`, `Apply by 11/13`, `Estimated close 11/13`, `Results expected 11/20`, or `Event starts 03/15`), a relative cue from today (`today`, `in 3 days`, `2 days ago`), city and state from the convention (`San Jose, CA`), and hearts for unclamped convention interest: one ❤️ per positive point, one 💔 per negative point, and none at zero.
+
+The owner may drag a card onto any of the five columns to change its status. Dragging an Approved card also reveals Attended and Withdrawn drop targets; dropping there removes the edition from Lineups. The convention detail status selector remains the fallback. An overdue Approved card remains until it is marked Attended or Withdrawn.
 
 ### Import status mapping
 
@@ -642,7 +645,7 @@ Keep these boundaries. A milestone may add files only in the modules it names.
 | Module | Responsibility |
 | --- | --- |
 | `src/db` | Drizzle client, migrations, SQLite path `data/vendor.sqlite`. |
-| `src/domain` | Types, status transitions, Cons/Lineups sorting, Calendar schedule markers, `createJobs`, `resolveJobResults`, `upsertJobResult`, edition naming, alias normalization. No I/O beyond the db passed in. |
+| `src/domain` | Types, status transitions, Cons/Lineups sorting, Lineups board grouping and drag targets, Calendar schedule markers, `createJobs`, `resolveJobResults`, `upsertJobResult`, edition naming, alias normalization. No I/O beyond the db passed in. |
 | `src/import` | Sheet CSV parse, heuristics, review decisions. |
 | `src/google` | OAuth, token refresh, Calendar create/patch/delete, Gmail list/get. |
 | `src/jobs` | Durable queue queries, job claim/finish behavior, and saved source queries. |
@@ -660,7 +663,7 @@ Keep these boundaries. A milestone may add files only in the modules it names.
 | --- | --- | --- |
 | `/` | M4 | Cons grid and sorting. |
 | `/cons/[id]` | M4 | Convention defaults, interest, aliases, saved sources, and editions. |
-| `/lineups` | M4 | Active editions ordered by action date, then Needs dates. |
+| `/lineups` | M4.7 | Five-column status board ordered by each column's action date. |
 | `/calendar` | M4.5 | Year grid of application-start and event-start dates for interested conventions. |
 | `/jobs` | M6 | Submit jobs and browse Queued, Running, Needs review, Done, and Failed groups. |
 | `/jobs/[id]` | M6 | Job evidence, result assignment, apply, dismissal, and retry. |
@@ -668,7 +671,7 @@ Keep these boundaries. A milestone may add files only in the modules it names.
 | `/discover` | M11 | Within a day, and Farther. |
 | `/settings` | M5 | Google connection, owner, and drive-limit hours. Sources are edited on the con page. |
 
-The top navigation shows **Cons**, **Lineups**, **Calendar**, **Jobs**, and **Settings** on every primary page. Import is linked as a setup tool rather than a permanent top-level item. Design for desktop first, but keep the Cons grid, Lineups, Calendar, and Jobs usable at narrow widths. There is no separate mobile design.
+The top navigation shows **Cons**, **Lineups**, **Calendar**, **Jobs**, and **Settings** on every primary page. Import is linked as a setup tool rather than a permanent top-level item. Design for desktop first, but keep the Cons grid, Lineups, Calendar, and Jobs usable at narrow widths. Lineups keeps its five columns and scrolls horizontally when the viewport is narrower than the board. There is no separate mobile design.
 
 Empty states use specific, actionable copy:
 
@@ -922,7 +925,30 @@ M1–M3 below are preserved as historical records of what was built, including t
 
 **Out of scope:** Calendar, Jobs, discovery, and renaming the `default_*` columns.
 
-**Completion note — 2026-11-05:** Schema `0005` backfills empty convention city/state from edition snapshots, then drops edition `city`/`region`. Cons and Lineups read location from the convention only. Edition create/update/import no longer touch location; con detail labels City/State. Browser: added M46 Location Con (Oakland, CA), edition 2027 with application start 2026-12-01 (no edition location fields), changed city to Berkeley → Cons tile `Berkeley, CA` and Lineups `Berkeley`. Live DB had never applied `0003`, so orphan `venue`/`address`/`postal_code`/`country` columns may remain on `edition` (ignored by the schema). Next agent: M5 Google Calendar reminders.
+**Completion note — 2026-11-05:** Schema `0005` backfills empty convention city/state from edition snapshots, then drops edition `city`/`region`. Cons and Lineups read location from the convention only. Edition create/update/import no longer touch location; con detail labels City/State. Browser: added M46 Location Con (Oakland, CA), edition 2027 with application start 2026-12-01 (no edition location fields), changed city to Berkeley → Cons tile `Berkeley, CA` and Lineups `Berkeley`. Live DB had never applied `0003`, so orphan `venue`/`address`/`postal_code`/`country` columns may remain on `edition` (ignored by the schema). Next agent: M4.7 Lineups board.
+
+### M4.7 — Time-centric Lineups board
+
+**Deliverables**
+
+- Replace the single dated list and Needs dates tail with five fixed columns: Waiting to apply, Ready to apply, Submitted, Waitlisted, and Approved.
+- Use the status-specific action dates above. Ready to apply without an end date uses application start plus 7 calendar days and labels that date estimated. Missing dates show **Date not set** and sort first in the column.
+- Show a named date line, a relative cue from the current Los Angeles day, city and state, and hearts for unclamped convention interest (❤️ positive, 💔 negative).
+- Allow dragging a card onto any of the five columns to change its status. Dragging an Approved card reveals Attended and Withdrawn drop targets. Those moves leave Lineups.
+- Put date descriptors, column grouping, sorting, relative cues, and allowed drag targets in pure domain functions with unit tests. Keep a focused status write behind a non-redirecting server action.
+- Cards open the exact edition on the convention page. The convention header shows `Interest Score` hearts and the existing equation. Ready to apply is visually stronger. Narrow widths keep five columns and scroll horizontally.
+
+**Acceptance**
+
+- Each column uses its own date rule, including the seven-day Ready estimate and month/year boundaries.
+- Undated cards sit above dated cards; dated cards sort by date, then name, then cycle.
+- Dragging between visible columns persists after refresh. Approved can move to Attended or Withdrawn; other Lineups statuses cannot.
+- Hearts appear as ❤️ for positive convention interest, 💔 for negative, and not at zero.
+- Browser verification covers desktop and narrow boards, date copy, estimated styling, click-through, pointer and keyboard moves, and both terminal targets.
+
+**Out of scope:** Calendar reminders, Jobs, and any other status vocabulary changes.
+
+**Completion note — 2026-11-06:** Lineups is a five-column board (Waiting, Ready, Submitted, Waitlisted, Approved) with status-specific dates, LA relative cues, and a 7-day estimated Ready close. Domain lives in `src/domain/lineupBoard.ts`; `moveLineupEdition` plus a non-redirecting action persist drag targets. Hearts use unclamped convention interest as ❤️ (positive) or 💔 (negative); the con header is `Interest Score ❤️ = [manual] + status counts`. Browser: desktop five-column grid, Ready emphasized, estimated italics, Date not set first; keyboard moved M47 2027 waiting→submitted; Approved tray Attended (2028) and Withdrawn (2029) persisted and left the board; after those drops `/cons/54` showed `Interest Score ❤️❤️❤️❤️ = [2] + 1 submitted + 1 attended`; FanimeCon card opens `/cons/24#edition-26`; 390px keeps five columns (`overflow-x`, client 390 / scroll 1344). Next agent: M5.
 
 ### M5 — Manual Calendar reminders
 

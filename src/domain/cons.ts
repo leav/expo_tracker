@@ -3,7 +3,10 @@ import { conventions, editions } from "../db/schema";
 import { compareCycleLabels } from "./cycles";
 import type { TrackerDb } from "./db";
 import { seedDriveMinutes } from "./driveTime";
+import { locationLabel } from "./location";
 import { editionInterest, isStatus, statusLabels, statuses, type Status } from "./status";
+
+export { locationLabel };
 
 export const consSortKeys = ["interest", "distance", "time", "name"] as const;
 export type ConsSortKey = (typeof consSortKeys)[number];
@@ -121,11 +124,6 @@ export function interestBackground(score: number): string {
   }
   const t = -clamped / 5;
   return `color-mix(in oklch, var(--card) ${Math.round((1 - t) * 72)}%, oklch(0.86 0.14 25))`;
-}
-
-export function locationLabel(city: string | null, region: string | null): string | null {
-  const parts = [city, region].filter((part): part is string => Boolean(part));
-  return parts.length > 0 ? parts.join(", ") : null;
 }
 
 export function startMonth(startDate: string | null): number | null {

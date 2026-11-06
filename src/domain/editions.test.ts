@@ -97,9 +97,11 @@ describe("edition writes", () => {
       notes: null,
     });
     assert.equal(waiting.ok, true);
-    const { dated } = listLineups(db);
-    const lineup = dated.find((item) => item.editionId === created.value.id);
+    const board = listLineups(db, todayInLosAngeles());
+    const lineup = board.columns.flatMap((column) => column.items).find((item) => item.editionId === created.value.id);
     assert.equal(lineup?.city, "San Francisco");
+    assert.equal(lineup?.region, "CA");
+    assert.equal(lineup?.locationLabel, "San Francisco, CA");
 
     const skipped = updateEdition(db, created.value.id, {
       conventionId: convention.value.id,
