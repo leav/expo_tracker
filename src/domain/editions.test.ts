@@ -83,43 +83,175 @@ describe("edition writes", () => {
     const fanimeAfter = tilesAfter.find((tile) => tile.conventionId === convention.value.id);
     assert.equal(fanimeAfter?.locationLabel, "San Francisco, CA");
 
-    const waiting = updateEdition(db, created.value.id, {
-      conventionId: convention.value.id,
-      cycleLabel: "2027",
-      startDate: "2027-05-22",
-      endDate: null,
-      applicationStartDate: "2026-11-08",
-      applicationEndDate: null,
-      status: "waiting_to_apply",
-      submittedAt: null,
-      resultDate: null,
-      paid: false,
-      notes: null,
-    });
+    const today = todayInLosAngeles();
+    const waiting = updateEdition(
+      db,
+      created.value.id,
+      {
+        conventionId: convention.value.id,
+        cycleLabel: "2027",
+        startDate: "2027-05-22",
+        endDate: null,
+        applicationStartDate: "2026-11-08",
+        applicationEndDate: null,
+        status: "waiting_to_apply",
+        submittedAt: null,
+        resultDate: null,
+        paid: false,
+        notes: null,
+      },
+      today,
+    );
     assert.equal(waiting.ok, true);
-    const board = listLineups(db, todayInLosAngeles());
+    const board = listLineups(db, today);
     const lineup = board.columns.flatMap((column) => column.items).find((item) => item.editionId === created.value.id);
     assert.equal(lineup?.city, "San Francisco");
     assert.equal(lineup?.region, "CA");
     assert.equal(lineup?.locationLabel, "San Francisco, CA");
 
-    const skipped = updateEdition(db, created.value.id, {
-      conventionId: convention.value.id,
-      cycleLabel: "2027",
-      startDate: null,
-      endDate: null,
-      applicationStartDate: "2026-11-08",
-      applicationEndDate: null,
-      status: "skipped",
-      submittedAt: null,
-      resultDate: null,
-      paid: false,
-      notes: null,
-    });
+    const skipped = updateEdition(
+      db,
+      created.value.id,
+      {
+        conventionId: convention.value.id,
+        cycleLabel: "2027",
+        startDate: null,
+        endDate: null,
+        applicationStartDate: "2026-11-08",
+        applicationEndDate: null,
+        status: "skipped",
+        submittedAt: null,
+        resultDate: null,
+        paid: false,
+        notes: null,
+      },
+      today,
+    );
     assert.equal(skipped.ok, true);
     const storedSkipped = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
     assert.equal(storedSkipped?.status, "skipped");
     const paid = setEditionPaid(db, created.value.id, true);
     assert.equal(paid.ok, false);
+  });
+
+  it("fills empty submitted and result dates on status transitions", () => {
+    const today = "2026-11-06";
+    const convention = createConvention(db, {
+      displayName: "Status Dates Con",
+      website: null,
+      notes: null,
+      defaultCity: "Oakland",
+      defaultRegion: "CA",
+      estimatedAttendance: null,
+    });
+    assert.equal(convention.ok, true);
+    if (!convention.ok) return;
+
+    const created = createEdition(db, {
+      conventionId: convention.value.id,
+      cycleLabel: "2027",
+      startDate: null,
+      endDate: null,
+      applicationStartDate: "2026-11-01",
+      applicationEndDate: null,
+      status: "open",
+      submittedAt: null,
+      resultDate: null,
+      paid: false,
+      notes: null,
+      inferInitialStatus: false,
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) return;
+
+    const submitted = updateEdition(
+      db,
+      created.value.id,
+      {
+        conventionId: convention.value.id,
+        cycleLabel: "2027",
+        startDate: null,
+        endDate: null,
+        applicationStartDate: "2026-11-01",
+        applicationEndDate: null,
+        status: "submitted",
+        submittedAt: null,
+        resultDate: null,
+        paid: false,
+        notes: null,
+      },
+      today,
+    );
+    assert.equal(submitted.ok, true);
+    const afterSubmit = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
+    assert.equal(afterSubmit?.submittedAt, today);
+    assert.equal(afterSubmit?.resultDate, null);
+
+    const rejected = updateEdition(
+      db,
+      created.value.id,
+      {
+        conventionId: convention.value.id,
+        cycleLabel: "2027",
+        startDate: null,
+        endDate: null,
+        applicationStartDate: "2026-11-01",
+        applicationEndDate: null,
+        status: "rejected",
+        submittedAt: today,
+        resultDate: null,
+        paid: false,
+        notes: null,
+      },
+      today,
+    );
+    assert.equal(rejected.ok, true);
+    const afterReject = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
+    assert.equal(afterReject?.submittedAt, today);
+    assert.equal(afterReject?.resultDate, today);
+
+    const sameStatus = updateEdition(
+      db,
+      created.value.id,
+      {
+        conventionId: convention.value.id,
+        cycleLabel: "2027",
+        startDate: null,
+        endDate: null,
+        applicationStartDate: "2026-11-01",
+        applicationEndDate: null,
+        status: "rejected",
+        submittedAt: today,
+        resultDate: null,
+        paid: false,
+        notes: null,
+      },
+      "2026-12-01",
+    );
+    assert.equal(sameStatus.ok, true);
+    const afterSame = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
+    assert.equal(afterSame?.resultDate, null);
+
+    const withExisting = updateEdition(
+      db,
+      created.value.id,
+      {
+        conventionId: convention.value.id,
+        cycleLabel: "2027",
+        startDate: null,
+        endDate: null,
+        applicationStartDate: "2026-11-01",
+        applicationEndDate: null,
+        status: "approved",
+        submittedAt: today,
+        resultDate: "2026-10-20",
+        paid: false,
+        notes: null,
+      },
+      today,
+    );
+    assert.equal(withExisting.ok, true);
+    const afterApproved = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
+    assert.equal(afterApproved?.resultDate, "2026-10-20");
   });
 });

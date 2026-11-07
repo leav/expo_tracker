@@ -107,7 +107,7 @@ export async function updateEditionAction(form: FormData) {
   const editionId = Number(form.get("editionId"));
   const input = editionInputFromForm(form, conventionId);
   if (isError(input)) fail(`/cons/${conventionId}`, { ok: false, error: input.error });
-  const result = updateEdition(openDatabase(), editionId, input);
+  const result = updateEdition(openDatabase(), editionId, input, todayInLosAngeles());
   if (!result.ok) fail(`/cons/${conventionId}`, result);
   revalidateWorkspace(conventionId);
   redirect(`/cons/${conventionId}`);
@@ -138,8 +138,9 @@ export async function moveLineupEditionAction(
   if (!Number.isInteger(id)) return { ok: false, error: "That edition is gone." };
   if (!isStatus(status)) return { ok: false, error: "Choose a status from the list." };
   const db = openDatabase();
-  const result = moveLineupEdition(db, id, status);
+  const today = todayInLosAngeles();
+  const result = moveLineupEdition(db, id, status, today);
   if (!result.ok) return { ok: false, error: result.error };
   revalidateWorkspace(result.value.conventionId);
-  return { ok: true, board: listLineups(db, todayInLosAngeles()) };
+  return { ok: true, board: listLineups(db, today) };
 }

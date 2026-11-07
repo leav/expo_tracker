@@ -330,7 +330,7 @@ describe("lineup writes", () => {
     assert.equal(created.ok, true);
     if (!created.ok) return;
 
-    const opened = moveLineupEdition(db, created.value.id, "open");
+    const opened = moveLineupEdition(db, created.value.id, "open", today);
     assert.equal(opened.ok, true);
     const boardOpen = listLineups(db, today);
     const openItem = boardOpen.columns
@@ -342,19 +342,70 @@ describe("lineup writes", () => {
     assert.equal(openItem?.locationLabel, "Oakland, CA");
     assert.equal(openItem?.interest, 1);
 
-    const rejected = moveLineupEdition(db, created.value.id, "withdrawn");
+    const rejected = moveLineupEdition(db, created.value.id, "withdrawn", today);
     assert.equal(rejected.ok, false);
 
-    const approved = moveLineupEdition(db, created.value.id, "approved");
+    const submitted = moveLineupEdition(db, created.value.id, "submitted", today);
+    assert.equal(submitted.ok, true);
+    const afterSubmit = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
+    assert.equal(afterSubmit?.status, "submitted");
+    assert.equal(afterSubmit?.submittedAt, today);
+    assert.equal(afterSubmit?.resultDate, null);
+
+    const approved = moveLineupEdition(db, created.value.id, "approved", today);
     assert.equal(approved.ok, true);
-    const attended = moveLineupEdition(db, created.value.id, "attended");
+    const afterApproved = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
+    assert.equal(afterApproved?.status, "approved");
+    assert.equal(afterApproved?.submittedAt, today);
+    assert.equal(afterApproved?.resultDate, today);
+
+    const attended = moveLineupEdition(db, created.value.id, "attended", today);
     assert.equal(attended.ok, true);
     const stored = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
     assert.equal(stored?.status, "attended");
+    assert.equal(stored?.resultDate, today);
     const boardAfter = listLineups(db, today);
     assert.equal(
       boardAfter.columns.flatMap((column) => column.items).some((row) => row.editionId === created.value.id),
       false,
     );
+  });
+
+  it("keeps existing submitted and result dates when dragging", () => {
+    const convention = createConvention(db, {
+      displayName: "Keep Dates Con",
+      website: null,
+      notes: null,
+      defaultCity: "Berkeley",
+      defaultRegion: "CA",
+      estimatedAttendance: null,
+    });
+    assert.equal(convention.ok, true);
+    if (!convention.ok) return;
+
+    const created = createEdition(db, {
+      conventionId: convention.value.id,
+      cycleLabel: "2027",
+      startDate: "2027-03-15",
+      endDate: null,
+      applicationStartDate: "2026-11-08",
+      applicationEndDate: null,
+      status: "open",
+      submittedAt: "2026-10-01",
+      resultDate: "2026-10-15",
+      paid: false,
+      notes: null,
+      inferInitialStatus: false,
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) return;
+
+    const submitted = moveLineupEdition(db, created.value.id, "submitted", today);
+    assert.equal(submitted.ok, true);
+    const waitlisted = moveLineupEdition(db, created.value.id, "waitlisted", today);
+    assert.equal(waitlisted.ok, true);
+    const stored = db.select().from(editions).where(eq(editions.id, created.value.id)).get();
+    assert.equal(stored?.submittedAt, "2026-10-01");
+    assert.equal(stored?.resultDate, "2026-10-15");
   });
 });

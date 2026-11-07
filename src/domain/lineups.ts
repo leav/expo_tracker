@@ -10,6 +10,7 @@ import {
   type LineupItem,
 } from "./lineupBoard";
 import { isLineupStatus, isStatus, type Status } from "./status";
+import { fillStatusDates } from "./statusDates";
 
 export {
   addCalendarDays,
@@ -75,6 +76,7 @@ export function moveLineupEdition(
   db: TrackerDb,
   editionId: number,
   toStatus: Status,
+  today: string,
 ): DomainResult<{ id: number; conventionId: number; status: Status }> {
   const current = db.select().from(editions).where(eq(editions.id, editionId)).get();
   if (!current) return { ok: false, error: "That edition is gone." };
@@ -91,6 +93,16 @@ export function moveLineupEdition(
     return { ok: false, error: "Drop that edition on a Lineups column." };
   }
 
-  db.update(editions).set({ status: toStatus }).where(eq(editions.id, editionId)).run();
+  const dates = fillStatusDates({
+    fromStatus: current.status,
+    toStatus,
+    submittedAt: current.submittedAt,
+    resultDate: current.resultDate,
+    today,
+  });
+  db.update(editions)
+    .set({ status: toStatus, submittedAt: dates.submittedAt, resultDate: dates.resultDate })
+    .where(eq(editions.id, editionId))
+    .run();
   return { ok: true, value: { id: current.id, conventionId: current.conventionId, status: toStatus } };
 }

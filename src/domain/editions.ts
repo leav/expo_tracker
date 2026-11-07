@@ -11,6 +11,7 @@ import {
   todayInLosAngeles,
   type Status,
 } from "./status";
+import { fillStatusDates } from "./statusDates";
 
 export type EditionInput = {
   conventionId: number;
@@ -109,6 +110,7 @@ export function updateEdition(
   db: TrackerDb,
   editionId: number,
   input: EditionInput,
+  today: string,
 ): DomainResult<{ id: number }> {
   const current = db.select().from(editions).where(eq(editions.id, editionId)).get();
   if (!current || current.conventionId !== input.conventionId) {
@@ -122,6 +124,13 @@ export function updateEdition(
     .find((row) => row.id !== editionId && row.cycleLabel === input.cycleLabel);
   if (duplicate) return { ok: false, error: `Cycle ${input.cycleLabel} is already on this convention.` };
 
+  const dates = fillStatusDates({
+    fromStatus: current.status,
+    toStatus: input.status,
+    submittedAt: input.submittedAt,
+    resultDate: input.resultDate,
+    today,
+  });
   const paid = isPaidStatus(input.status) ? input.paid : current.paid;
   db.update(editions)
     .set({
@@ -130,8 +139,8 @@ export function updateEdition(
       endDate: input.endDate,
       applicationStartDate: input.applicationStartDate,
       applicationEndDate: input.applicationEndDate,
-      submittedAt: input.submittedAt,
-      resultDate: input.resultDate,
+      submittedAt: dates.submittedAt,
+      resultDate: dates.resultDate,
       notes: input.notes,
       status: input.status,
       paid,

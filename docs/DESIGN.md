@@ -32,6 +32,7 @@ Rules for every milestone:
 | M4.6 | done | City and state live only on the convention. |
 | M4.7 | done | Time-centric Lineups board with drag-and-drop status moves. |
 | M4.8 | done | Auto-fill empty edition dates from application or event start. |
+| M4.9 | done | Set empty submitted/result dates when status transitions. |
 | M5 | not started | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
 | M7 | not started | Manually started Gmail scan jobs. |
@@ -971,7 +972,28 @@ M1–M3 below are preserved as historical records of what was built, including t
 
 **Out of scope:** Calendar reminders, Jobs, and import date heuristics.
 
-**Completion note — 2026-11-06:** `addCalendarMonths` and `fillEditionDates` fill empty application end (+7 days), result (+1 month, clamped), and event end (+1 day) from start dates. Client `EditionDateFields` on Add/Edit; Add edition now includes Result. Browser on FanimeCon: Add 2028 with app start 2026-11-06 filled end 11/13 and result 12/06; event start 2027-05-22 filled end 05/23; save persisted. Changing start left existing end/result alone; clearing Result and saving kept it empty after reload. Edit 2027 with empty end/result filled on application-start change. Next agent: M5.
+**Completion note — 2026-11-06:** `addCalendarMonths` and `fillEditionDates` fill empty application end (+7 days), result (+1 month, clamped), and event end (+1 day) from start dates. Client `EditionDateFields` on Add/Edit; Add edition now includes Result. Browser on FanimeCon: Add 2028 with app start 2026-11-06 filled end 11/13 and result 12/06; event start 2027-05-22 filled end 05/23; save persisted. Changing start left existing end/result alone; clearing Result and saving kept it empty after reload. Edit 2027 with empty end/result filled on application-start change. Next agent: M4.9 status date automation.
+
+### M4.9 — Status date automation
+
+**Deliverables**
+
+- When an edition actually transitions into `submitted`, set empty `submittedAt` to the current Los Angeles day.
+- When an edition actually transitions into `approved`, `waitlisted`, or `rejected`, set empty `resultDate` to the current Los Angeles day.
+- Never overwrite an existing date. Saving the same status again must not recreate a date the owner cleared.
+- Apply the same rules through the convention status selector and Lineups drag-and-drop. Put the rules in a pure domain helper with unit tests. No schema change.
+
+**Acceptance**
+
+- Moving or saving into Submitted fills Submitted when empty and leaves a filled Submitted alone.
+- Moving or saving into Approved, Waitlisted, or Rejected fills Result when empty and leaves a filled Result alone.
+- Same-status saves do not refill cleared dates.
+- Unit tests cover transitions, no-overwrite, same-status, and unrelated statuses.
+- Browser verification covers the convention form and Lineups board.
+
+**Out of scope:** Calendar reminders, Jobs, and import status heuristics.
+
+**Completion note — 2026-11-06:** `fillStatusDates` fills empty `submittedAt` on transition into submitted and empty `resultDate` on transition into approved/waitlisted/rejected; same-status and existing dates are left alone. Wired through `updateEdition` and `moveLineupEdition` with injectable LA `today`. Browser: FanimeCon 2028 form → Submitted then Rejected set both dates to 2026-11-06; Lineups keyboard-drag FanX Waiting→Submitted filled submitted, Momocon Submitted→Waitlisted filled result; both persisted after reload. Next agent: M5 Calendar reminders only.
 
 ### M5 — Manual Calendar reminders
 
