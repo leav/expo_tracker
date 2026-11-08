@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 
 export function revalidateWorkspace(conventionId?: number) {
   revalidatePath("/");
@@ -7,4 +7,5 @@ export function revalidateWorkspace(conventionId?: number) {
   if (conventionId != null && Number.isInteger(conventionId)) {
     revalidatePath(`/cons/${conventionId}`);
   }
+  refresh();
 }

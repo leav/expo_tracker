@@ -80,12 +80,40 @@ function columnDropId(status: LineupStatus) {
   return `column:${status}`;
 }
 
+function boardFingerprint(board: LineupBoard): string {
+  return board.columns
+    .flatMap((column) =>
+      column.items.map(
+        (item) =>
+          [
+            item.editionId,
+            item.status,
+            item.conventionName,
+            item.cycleLabel,
+            item.dateLabel,
+            item.relativeLabel ?? "",
+            item.locationLabel ?? "",
+            item.interest,
+            item.website ?? "",
+          ].join("\u001f"),
+      ),
+    )
+    .join("\u001e");
+}
+
 export function LineupsBoard({ board: initialBoard, today }: { board: LineupBoard; today: string }) {
   const [board, setBoard] = useState(initialBoard);
+  const [appliedFingerprint, setAppliedFingerprint] = useState(() => boardFingerprint(initialBoard));
   const [activeItem, setActiveItem] = useState<LineupItem | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  const incomingFingerprint = boardFingerprint(initialBoard);
+  if (incomingFingerprint !== appliedFingerprint) {
+    setAppliedFingerprint(incomingFingerprint);
+    setBoard(initialBoard);
+    setError(null);
+  }
   const dndReady = useSyncExternalStore(subscribeClientReady, () => true, () => false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
