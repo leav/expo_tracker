@@ -33,6 +33,7 @@ Rules for every milestone:
 | M4.7 | done | Time-centric Lineups board with drag-and-drop status moves. |
 | M4.8 | done | Auto-fill empty edition dates from application or event start. |
 | M4.9 | done | Set empty submitted/result dates when status transitions. |
+| M4.10 | done | Convention titles link to the website when one is set. |
 | M5 | not started | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
 | M7 | not started | Manually started Gmail scan jobs. |
@@ -994,6 +995,25 @@ M1–M3 below are preserved as historical records of what was built, including t
 **Out of scope:** Calendar reminders, Jobs, and import status heuristics.
 
 **Completion note — 2026-11-06:** `fillStatusDates` fills empty `submittedAt` on transition into submitted and empty `resultDate` on transition into approved/waitlisted/rejected; same-status and existing dates are left alone. Wired through `updateEdition` and `moveLineupEdition` with injectable LA `today`. Browser: FanimeCon 2028 form → Submitted then Rejected set both dates to 2026-11-06; Lineups keyboard-drag FanX Waiting→Submitted filled submitted, Momocon Submitted→Waitlisted filled result; both persisted after reload. Next agent: M5 Calendar reminders only.
+
+### M4.10 — Convention title website links
+
+**Deliverables**
+
+- When a convention has a usable `website`, its title on Expos, Lineups, and the con detail header is a heading-style outbound link that opens in a new tab.
+- Expos tiles and Lineups cards keep in-app navigation on the rest of the card (dates, status, hearts, location, and the Lineups cycle label).
+- Titles without a website keep current in-app behavior; the detail `h1` is plain text when empty.
+- Calendar titles stay unchanged. Put URL normalization in a pure helper with unit tests. No schema change.
+
+**Acceptance**
+
+- A con with a website: titles on Expos, Lineups, and details open the site; the rest of the tile/card still opens the con.
+- A con without a website: titles still open the con; detail `h1` is not a link.
+- Host-like stored values such as `fanime.com` link as `https://…`; blank and non-http schemes do not link.
+
+**Out of scope:** Calendar reminder work, Jobs, and changing the Website form field.
+
+**Completion note — 2026-11-08:** `hrefForWebsite` normalizes stored websites; `ConventionTitle` renders the outbound superlink with an external icon. Expos/Lineups split title vs rest-of-card links; con detail header uses the same component. Browser: Magwest title → `https://magwest.org/` (`_blank`), tile body → `/cons/1`; Anime Night Mart title stays in-app and detail `h1` is plain text; Lineups FanimeCon title → fanime.com artist-alley URL, cycle/body → `/cons/24#edition-26`, Momocon title stays in-app; Calendar FanimeCon chips still open `/cons/…` only. Next agent: M5 Calendar reminders only.
 
 ### M5 — Manual Calendar reminders
 

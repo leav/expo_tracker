@@ -32,6 +32,7 @@ function source(overrides: Partial<LineupSource> & Pick<LineupSource, "editionId
   return {
     conventionId: overrides.editionId,
     conventionName: "FanimeCon",
+    website: null,
     cycleLabel: "2027",
     applicationStartDate: null,
     applicationEndDate: null,

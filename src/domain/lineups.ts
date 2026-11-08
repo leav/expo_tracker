@@ -53,6 +53,7 @@ export function listLineups(db: TrackerDb, today: string): LineupBoard {
         editionId: row.id,
         conventionId: row.conventionId,
         conventionName: convention.displayName,
+        website: convention.website,
         cycleLabel: row.cycleLabel,
         status: row.status,
         applicationStartDate: row.applicationStartDate,

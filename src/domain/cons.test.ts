@@ -12,6 +12,7 @@ import {
 
 function tile(overrides: Partial<ConsTile> & Pick<ConsTile, "conventionId" | "displayName">): ConsTile {
   return {
+    website: null,
     eventDate: null,
     status: null,
     statusLabel: null,

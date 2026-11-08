@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { createConventionAction } from "./actions";
+import { ConventionTitle } from "../components/convention-title";
 import { Button } from "../components/ui/button";
 import { interestBackground, listCons, parseConsSort, type ConsSortKey } from "../domain/cons";
 import { countConventions } from "../domain/conventions";
@@ -74,6 +75,7 @@ export default async function Home({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {tiles.map((tile) => {
+          const detailHref = `/cons/${tile.conventionId}`;
           const summary = [
             tile.displayName,
             tile.eventDate ?? "no event date",
@@ -82,18 +84,22 @@ export default async function Home({
             `interest ${tile.interest}`,
           ].join(", ");
           return (
-            <Link
+            <article
               key={tile.conventionId}
-              href={`/cons/${tile.conventionId}`}
-              aria-label={summary}
               className="flex flex-col gap-1 rounded-lg border p-3 hover:border-foreground/40"
               style={{ backgroundColor: interestBackground(tile.interest) }}
             >
-              <span className="font-medium">{tile.displayName}</span>
-              <span className="text-sm text-muted-foreground">{tile.eventDate ?? "No event date"}</span>
-              <span className="text-sm">{tile.hasEditions ? tile.statusLabel ?? "Unknown" : "No editions"}</span>
-              <span className="text-sm text-muted-foreground">{tile.locationLabel ?? "City unknown"}</span>
-            </Link>
+              <ConventionTitle
+                name={tile.displayName}
+                website={tile.website}
+                fallbackHref={detailHref}
+              />
+              <Link href={detailHref} aria-label={summary} className="grid gap-1">
+                <span className="text-sm text-muted-foreground">{tile.eventDate ?? "No event date"}</span>
+                <span className="text-sm">{tile.hasEditions ? tile.statusLabel ?? "Unknown" : "No editions"}</span>
+                <span className="text-sm text-muted-foreground">{tile.locationLabel ?? "City unknown"}</span>
+              </Link>
+            </article>
           );
         })}
       </div>

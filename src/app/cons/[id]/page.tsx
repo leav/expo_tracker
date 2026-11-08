@@ -10,6 +10,7 @@ import {
   updateEditionAction,
 } from "../../actions";
 import { ConfirmForm } from "../../../components/confirm-form";
+import { ConventionTitle } from "../../../components/convention-title";
 import { EditionDateFields } from "../../../components/edition-date-fields";
 import { InterestHearts } from "../../../components/interest-hearts";
 import { Button } from "../../../components/ui/button";
@@ -40,7 +41,7 @@ export default async function ConsDetailPage({
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
       <header className="grid gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{convention.displayName}</h1>
+        <ConventionTitle as="h1" name={convention.displayName} website={convention.website} />
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <span>Interest Score</span>
           <InterestHearts score={series.interest} />

@@ -24,6 +24,7 @@ import { GripVertical } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { moveLineupEditionAction } from "../actions";
+import { ConventionTitle } from "../../components/convention-title";
 import { InterestHearts } from "../../components/interest-hearts";
 import {
   applyLineupMove,
@@ -162,7 +163,11 @@ export function LineupsBoard({ board: initialBoard, today }: { board: LineupBoar
           ) : null}
           <DragOverlay>
             {activeItem ? (
-              <LineupCardFace item={activeItem} className="rounded-lg border bg-card p-3 shadow-lg" />
+              <LineupCardFace
+                item={activeItem}
+                detailHref={`/cons/${activeItem.conventionId}#edition-${activeItem.editionId}`}
+                className="rounded-lg border bg-card p-3 shadow-lg"
+              />
             ) : null}
           </DragOverlay>
         </DndContext>
@@ -293,6 +298,7 @@ function LineupCardLayout({
   isDragging?: boolean;
   handleProps?: ButtonHTMLAttributes<HTMLButtonElement>;
 }) {
+  const detailHref = `/cons/${item.conventionId}#edition-${item.editionId}`;
   return (
     <article ref={cardRef} className={cn("flex gap-1 rounded-lg border bg-card p-2", isDragging ? "opacity-40" : "")}>
       <button
@@ -303,9 +309,9 @@ function LineupCardLayout({
       >
         <GripVertical className="size-4" />
       </button>
-      <Link href={`/cons/${item.conventionId}#edition-${item.editionId}`} className="min-w-0 flex-1">
-        <LineupCardFace item={item} />
-      </Link>
+      <div className="min-w-0 flex-1">
+        <LineupCardFace item={item} detailHref={detailHref} />
+      </div>
     </article>
   );
 }
@@ -327,28 +333,41 @@ function DraggableLineupCard({ item, disabled }: { item: LineupItem; disabled: b
   );
 }
 
-function LineupCardFace({ item, className }: { item: LineupItem; className?: string }) {
+function LineupCardFace({
+  item,
+  detailHref,
+  className,
+}: {
+  item: LineupItem;
+  detailHref: string;
+  className?: string;
+}) {
   return (
     <div className={cn("grid gap-1", className)}>
-      <span className="font-medium leading-tight">
-        {item.conventionName} {item.cycleLabel}
-      </span>
-      <InterestHearts score={item.interest} />
-      <span
-        className={
-          item.actionDate == null
-            ? "text-sm text-muted-foreground"
-            : item.estimated
-              ? "text-sm font-medium italic"
-              : "text-sm font-medium"
-        }
-      >
-        {item.dateLabel}
-      </span>
-      {item.relativeLabel ? <span className="text-xs text-muted-foreground">{item.relativeLabel}</span> : null}
-      {item.locationLabel ? (
-        <span className="text-xs text-muted-foreground">{item.locationLabel}</span>
-      ) : null}
+      <ConventionTitle name={item.conventionName} website={item.website} fallbackHref={detailHref}>
+        {" "}
+        <Link href={detailHref} className="font-medium leading-tight hover:underline">
+          {item.cycleLabel}
+        </Link>
+      </ConventionTitle>
+      <Link href={detailHref} className="grid gap-1">
+        <InterestHearts score={item.interest} />
+        <span
+          className={
+            item.actionDate == null
+              ? "text-sm text-muted-foreground"
+              : item.estimated
+                ? "text-sm font-medium italic"
+                : "text-sm font-medium"
+          }
+        >
+          {item.dateLabel}
+        </span>
+        {item.relativeLabel ? <span className="text-xs text-muted-foreground">{item.relativeLabel}</span> : null}
+        {item.locationLabel ? (
+          <span className="text-xs text-muted-foreground">{item.locationLabel}</span>
+        ) : null}
+      </Link>
     </div>
   );
 }

@@ -14,6 +14,7 @@ export type LineupSource = {
   editionId: number;
   conventionId: number;
   conventionName: string;
+  website: string | null;
   cycleLabel: string;
   status: Status;
   applicationStartDate: string | null;
@@ -29,6 +30,7 @@ export type LineupItem = {
   editionId: number;
   conventionId: number;
   conventionName: string;
+  website: string | null;
   cycleLabel: string;
   status: LineupStatus;
   statusLabel: string;
@@ -151,6 +153,7 @@ export function presentLineupItem(source: LineupSource, today: string): LineupIt
     editionId: source.editionId,
     conventionId: source.conventionId,
     conventionName: source.conventionName,
+    website: source.website,
     cycleLabel: source.cycleLabel,
     status: source.status,
     statusLabel: statusLabels[source.status],
