@@ -14,6 +14,14 @@ The owner's Mac checkout path is `/Users/songye/Development/vendor_tracker`. In 
 
 UI milestones are done only after the flow has been exercised in a browser (or, if no browser is available, against the running local server) and the result is described in the milestone note.
 
+### Mock data for browser verification
+
+Browser and manual checks run against `data/vendor.sqlite`. Do not create, edit, drag, or delete real (non-mock) conventions or editions.
+
+- Name every test convention with a `[MOCK]` prefix, for example `[MOCK] Calendar Con`.
+- Name every test edition cycle with a `mock-` prefix, for example `mock-2027`.
+- Run `pnpm mock:clean` before and after browser verification so aborted runs do not leave mock rows behind.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

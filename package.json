@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start --hostname 127.0.0.1 --port 4747",
     "worker": "tsx src/worker/index.ts",
+    "mock:clean": "tsx src/db/clean-mock.ts",
     "lint": "eslint",
     "test": "tsx --test src/domain/*.test.ts src/import/*.test.ts"
   },

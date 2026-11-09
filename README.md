@@ -17,6 +17,8 @@ The UI listens on [http://127.0.0.1:4747](http://127.0.0.1:4747). The first laun
 
 `pnpm worker` runs the same worker loop outside the web server. In this milestone the loop starts and does not poll anything.
 
+`pnpm mock:clean` deletes conventions whose names start with `[MOCK]` (also `MOCK:` / `MOCK -`) and any leftover editions whose cycle labels start with `mock-`. Use that before and after browser verification so test rows never mix with real data. Do not edit real conventions or editions while verifying UI milestones.
+
 Copy `.env.example` to `.env.local` when you have optional keys. The app runs without them. `SESSION_SECRET` will sign the local session cookie once a session exists. Google, the language-model extractor, and Discord stay off until their keys are set.
 
 Intended checkout on the owner's Mac:

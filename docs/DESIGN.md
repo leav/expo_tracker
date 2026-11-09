@@ -647,8 +647,8 @@ Keep these boundaries. A milestone may add files only in the modules it names.
 
 | Module | Responsibility |
 | --- | --- |
-| `src/db` | Drizzle client, migrations, SQLite path `data/vendor.sqlite`. |
-| `src/domain` | Types, status transitions, Cons/Lineups sorting, Lineups board grouping and drag targets, Calendar schedule markers, `createJobs`, `resolveJobResults`, `upsertJobResult`, edition naming, alias normalization. No I/O beyond the db passed in. |
+| `src/db` | Drizzle client, migrations, SQLite path `data/vendor.sqlite`, and `pnpm mock:clean` entry point. |
+| `src/domain` | Types, status transitions, Cons/Lineups sorting, Lineups board grouping and drag targets, Calendar schedule markers, `createJobs`, `resolveJobResults`, `upsertJobResult`, edition naming, alias normalization, and mock-data cleanup helpers. No I/O beyond the db passed in. |
 | `src/import` | Sheet CSV parse, heuristics, review decisions. |
 | `src/google` | OAuth, token refresh, Calendar create/patch/delete, Gmail list/get. |
 | `src/jobs` | Durable queue queries, job claim/finish behavior, and saved source queries. |
@@ -1161,6 +1161,15 @@ Given a fixture schedule with Fanime already in the database, a new Bay Area con
 - Domain and job milestones: unit tests for the cases named in the milestone. Run them with `pnpm test`.
 - UI milestones (M2 onward): exercise the named path in a browser on port 4747. Click through Cons/Lineups, import review, Calendar reminder controls, Jobs review, or settings as applicable. Say what you clicked and what you saw in the milestone note.
 - External services stay behind fixtures. Live Google is optional and only when `.env.local` is present.
+
+### Mock data in `data/vendor.sqlite`
+
+Unit tests use in-memory SQLite. Browser verification uses the owner's local database, so agents must not create, edit, drag, or delete real conventions or editions.
+
+- Name every browser-test convention with a `[MOCK]` prefix (also accepted: `MOCK:` or `MOCK -`), for example `[MOCK] Calendar Con`.
+- Name every browser-test edition cycle with a `mock-` prefix, for example `mock-2027`. Prefer creating those editions under a `[MOCK]` convention.
+- `isMockConventionName`, `isMockCycleLabel`, and `cleanMockData` in `src/domain/mock.ts` identify and purge those rows without touching real data. Convention delete cascades aliases, editions, and edition links.
+- Run `pnpm mock:clean` before and after browser verification so an aborted session does not leave mock rows behind.
 
 ## Sheet reference
 
