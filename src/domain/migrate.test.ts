@@ -245,3 +245,50 @@ describe("0005 edition location on convention migration", () => {
     assert.equal(editionColumns.includes("region"), false);
   });
 });
+
+describe("0006 calendar reminders migration", () => {
+  let sqlite: Database.Database;
+
+  before(() => {
+    sqlite = new Database(":memory:");
+    for (const name of [
+      "0000_powerful_lenny_balinger.sql",
+      "0001_import_review.sql",
+      "0002_core_workspace.sql",
+      "0003_city_state_only.sql",
+      "0004_skipped_status.sql",
+      "0005_edition_location_on_con.sql",
+    ]) {
+      sqlite.exec(sqlFile(name));
+    }
+    sqlite
+      .prepare("INSERT INTO convention (display_name, normalized, manual_interest) VALUES (?, ?, 0)")
+      .run("M5 Con", "m5con");
+    sqlite
+      .prepare("INSERT INTO edition (convention_id, cycle_label, status, paid) VALUES (1, '2027', 'unknown', 0)")
+      .run();
+    sqlite.exec(sqlFile("0006_calendar_reminders.sql"));
+  });
+
+  after(() => {
+    sqlite.close();
+  });
+
+  it("adds reminder flags defaulting to off and calendar tables", () => {
+    const edition = sqlite.prepare(
+      "SELECT start_reminder_enabled, application_start_reminder_enabled FROM edition WHERE cycle_label = '2027'",
+    ).get() as {
+      start_reminder_enabled: number;
+      application_start_reminder_enabled: number;
+    };
+    assert.equal(edition.start_reminder_enabled, 0);
+    assert.equal(edition.application_start_reminder_enabled, 0);
+
+    const tables = (sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
+      (row) => row.name,
+    );
+    assert.equal(tables.includes("setting"), true);
+    assert.equal(tables.includes("google_credential"), true);
+    assert.equal(tables.includes("calendar_sync"), true);
+  });
+});

@@ -20,6 +20,7 @@ export type ScheduleMarker = {
   conventionName: string;
   cycleLabel: string;
   editionId: number;
+  googleEventId: string | null;
 };
 
 export type ScheduleEditionRow = {
@@ -28,6 +29,10 @@ export type ScheduleEditionRow = {
   status: string;
   applicationStartDate: string | null;
   startDate: string | null;
+  applicationStartReminderEnabled?: boolean;
+  startReminderEnabled?: boolean;
+  applicationStartDateCalendarEventId?: string | null;
+  startDateCalendarEventId?: string | null;
 };
 
 export type ScheduleConventionRow = {
@@ -52,11 +57,24 @@ function compareMarkers(a: ScheduleMarker, b: ScheduleMarker): number {
   );
 }
 
+function googleEventIdFor(
+  edition: ScheduleEditionRow,
+  kind: ScheduleKind,
+): string | null {
+  if (kind === "application_start") {
+    if (!edition.applicationStartReminderEnabled) return null;
+    return edition.applicationStartDateCalendarEventId?.trim() || null;
+  }
+  if (!edition.startReminderEnabled) return null;
+  return edition.startDateCalendarEventId?.trim() || null;
+}
+
 function pushIfPresent(
   markers: ScheduleMarker[],
   date: string | null,
   kind: ScheduleKind,
-  base: Omit<ScheduleMarker, "date" | "kind" | "kindLabel">,
+  edition: ScheduleEditionRow,
+  base: Omit<ScheduleMarker, "date" | "kind" | "kindLabel" | "googleEventId">,
 ): void {
   if (!date) return;
   markers.push({
@@ -64,6 +82,7 @@ function pushIfPresent(
     date,
     kind,
     kindLabel: scheduleKindLabels[kind],
+    googleEventId: googleEventIdFor(edition, kind),
   });
 }
 
@@ -81,8 +100,8 @@ export function scheduleMarkersFromRows(rows: ScheduleConventionRow[]): Schedule
         cycleLabel: edition.cycleLabel,
         editionId: edition.id,
       };
-      pushIfPresent(markers, edition.applicationStartDate, "application_start", base);
-      pushIfPresent(markers, edition.startDate, "event_start", base);
+      pushIfPresent(markers, edition.applicationStartDate, "application_start", edition, base);
+      pushIfPresent(markers, edition.startDate, "event_start", edition, base);
     }
   }
   return markers.sort(compareMarkers);
@@ -106,6 +125,10 @@ export function listScheduleMarkers(db: TrackerDb): ScheduleMarker[] {
       status: editions.status,
       applicationStartDate: editions.applicationStartDate,
       startDate: editions.startDate,
+      applicationStartReminderEnabled: editions.applicationStartReminderEnabled,
+      startReminderEnabled: editions.startReminderEnabled,
+      applicationStartDateCalendarEventId: editions.applicationStartDateCalendarEventId,
+      startDateCalendarEventId: editions.startDateCalendarEventId,
     })
     .from(editions)
     .all();
@@ -119,6 +142,10 @@ export function listScheduleMarkers(db: TrackerDb): ScheduleMarker[] {
       status: row.status,
       applicationStartDate: row.applicationStartDate,
       startDate: row.startDate,
+      applicationStartReminderEnabled: row.applicationStartReminderEnabled,
+      startReminderEnabled: row.startReminderEnabled,
+      applicationStartDateCalendarEventId: row.applicationStartDateCalendarEventId,
+      startDateCalendarEventId: row.startDateCalendarEventId,
     });
     byConvention.set(row.conventionId, list);
   }

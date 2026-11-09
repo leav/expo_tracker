@@ -1,6 +1,7 @@
-import { inArray } from "drizzle-orm";
 import { conventions, editions } from "../db/schema";
+import { deleteConvention } from "./conventions";
 import type { TrackerDb } from "./db";
+import { deleteEdition } from "./editions";
 
 const MOCK_CONVENTION_NAME = /^(?:\[mock\]|mock\s*[:\-]|mock\s+)/i;
 const MOCK_CYCLE_LABEL = /^(?:\[mock\]|mock(?:[\s:_-]|$))/i;
@@ -26,15 +27,8 @@ export function cleanMockData(db: TrackerDb): MockCleanupSummary {
   const deletedConventions = allConventions.filter((row) => isMockConventionName(row.displayName));
   const mockConventionIds = new Set(deletedConventions.map((row) => row.id));
 
-  if (deletedConventions.length > 0) {
-    db.delete(conventions)
-      .where(
-        inArray(
-          conventions.id,
-          deletedConventions.map((row) => row.id),
-        ),
-      )
-      .run();
+  for (const row of deletedConventions) {
+    deleteConvention(db, row.id);
   }
 
   const remainingEditions = db
@@ -49,15 +43,8 @@ export function cleanMockData(db: TrackerDb): MockCleanupSummary {
     (row) => !mockConventionIds.has(row.conventionId) && isMockCycleLabel(row.cycleLabel),
   );
 
-  if (deletedEditions.length > 0) {
-    db.delete(editions)
-      .where(
-        inArray(
-          editions.id,
-          deletedEditions.map((row) => row.id),
-        ),
-      )
-      .run();
+  for (const row of deletedEditions) {
+    deleteEdition(db, row.id);
   }
 
   return { deletedConventions, deletedEditions };

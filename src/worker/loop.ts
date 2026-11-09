@@ -1,7 +1,9 @@
 import { openDatabase } from "../db";
+import { processCalendarSync } from "./calendar";
 
 const globalForWorker = globalThis as unknown as {
   workerStarted?: boolean;
+  calendarSyncRunning?: boolean;
 };
 
 const tickMs = 60_000;
@@ -11,13 +13,23 @@ export function startWorker(options?: { keepAlive?: boolean }) {
   globalForWorker.workerStarted = true;
 
   openDatabase();
-  console.log("worker: started; no detectors configured");
+  console.log("worker: started; retrying Calendar synchronization");
 
-  const timer = setInterval(tick, tickMs);
+  const timer = setInterval(() => {
+    kickCalendarSync();
+  }, tickMs);
   if (!options?.keepAlive) timer.unref();
+  kickCalendarSync();
 }
 
-function tick() {
-  // Detectors arrive in later milestones. A detector whose credentials are
-  // missing no-ops. M1 has none.
+export function kickCalendarSync() {
+  if (globalForWorker.calendarSyncRunning) return;
+  globalForWorker.calendarSyncRunning = true;
+  void processCalendarSync(openDatabase())
+    .catch((error) => {
+      console.error("worker: calendar sync failed", error);
+    })
+    .finally(() => {
+      globalForWorker.calendarSyncRunning = false;
+    });
 }

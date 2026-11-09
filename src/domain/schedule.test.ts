@@ -163,6 +163,36 @@ describe("scheduleMarkersFromRows", () => {
     );
   });
 
+  it("includes a Google event id only when that reminder is enabled and the id exists", () => {
+    const markers = scheduleMarkersFromRows([
+      convention({
+        id: 1,
+        displayName: "Reminder Con",
+        manualInterest: 2,
+        editions: [
+          {
+            id: 1,
+            cycleLabel: "2027",
+            status: "waiting_to_apply",
+            applicationStartDate: "2026-12-01",
+            startDate: "2027-03-01",
+            applicationStartReminderEnabled: true,
+            applicationStartDateCalendarEventId: "evt-app",
+            startReminderEnabled: false,
+            startDateCalendarEventId: "evt-stale",
+          },
+        ],
+      }),
+    ]);
+    assert.deepEqual(
+      markers.map((marker) => ({ kind: marker.kind, googleEventId: marker.googleEventId })),
+      [
+        { kind: "application_start", googleEventId: "evt-app" },
+        { kind: "event_start", googleEventId: null },
+      ],
+    );
+  });
+
   it("still plots a rejected edition with past and future dates when interest is positive", () => {
     const markers = scheduleMarkersFromRows([
       convention({

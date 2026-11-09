@@ -12,6 +12,7 @@ import {
   type Status,
 } from "./status";
 import { fillStatusDates } from "./statusDates";
+import { queueDeletesForEdition, syncRemindersForDateChanges } from "./calendarSync";
 
 export type EditionInput = {
   conventionId: number;
@@ -147,12 +148,17 @@ export function updateEdition(
     })
     .where(eq(editions.id, editionId))
     .run();
+  syncRemindersForDateChanges(db, current, {
+    startDate: input.startDate,
+    applicationStartDate: input.applicationStartDate,
+  });
   return { ok: true, value: { id: editionId } };
 }
 
 export function deleteEdition(db: TrackerDb, editionId: number): DomainResult<{ id: number }> {
   const current = db.select({ id: editions.id }).from(editions).where(eq(editions.id, editionId)).get();
   if (!current) return { ok: false, error: "That edition is gone." };
+  queueDeletesForEdition(db, editionId);
   db.delete(editions).where(eq(editions.id, editionId)).run();
   return { ok: true, value: { id: editionId } };
 }

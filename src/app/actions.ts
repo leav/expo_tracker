@@ -19,7 +19,10 @@ import {
 import { blankToNull, isError, parseAttendance, parseOptionalMinutes, parseSignedInteger } from "../domain/fields";
 import { listLineups, moveLineupEdition, type LineupBoard } from "../domain/lineups";
 import { isStatus, todayInLosAngeles } from "../domain/status";
+import { disableReminder, enableReminder, retryCalendarSync } from "../domain/calendarSync";
+import { isReminderKind } from "../domain/calendarEvent";
 import { openDatabase } from "../db";
+import { kickCalendarSync } from "../worker/loop";
 import { revalidateWorkspace } from "./revalidate";
 
 function fail(path: string, result: DomainResult<unknown>): never {
@@ -70,6 +73,7 @@ export async function deleteConventionAction(form: FormData) {
   const result = deleteConvention(openDatabase(), id);
   if (!result.ok) fail(`/cons/${id}`, result);
   revalidateWorkspace(id);
+  kickCalendarSync();
   redirect("/");
 }
 
@@ -110,6 +114,7 @@ export async function updateEditionAction(form: FormData) {
   const result = updateEdition(openDatabase(), editionId, input, todayInLosAngeles());
   if (!result.ok) fail(`/cons/${conventionId}`, result);
   revalidateWorkspace(conventionId);
+  kickCalendarSync();
   redirect(`/cons/${conventionId}`);
 }
 
@@ -119,6 +124,7 @@ export async function deleteEditionAction(form: FormData) {
   const result = deleteEdition(openDatabase(), editionId);
   if (!result.ok) fail(`/cons/${conventionId}`, result);
   revalidateWorkspace(conventionId);
+  kickCalendarSync();
   redirect(`/cons/${conventionId}`);
 }
 
@@ -143,4 +149,38 @@ export async function moveLineupEditionAction(
   if (!result.ok) return { ok: false, error: result.error };
   revalidateWorkspace(result.value.conventionId);
   return { ok: true, board: listLineups(db, today) };
+}
+
+export async function enableReminderAction(form: FormData) {
+  const conventionId = Number(form.get("conventionId"));
+  const editionId = Number(form.get("editionId"));
+  const kind = String(form.get("kind") ?? "");
+  if (!isReminderKind(kind)) fail(`/cons/${conventionId}`, { ok: false, error: "Choose a reminder date." });
+  const result = enableReminder(openDatabase(), editionId, kind);
+  if (!result.ok) fail(`/cons/${conventionId}`, result);
+  revalidateWorkspace(conventionId);
+  kickCalendarSync();
+  redirect(`/cons/${conventionId}`);
+}
+
+export async function disableReminderAction(form: FormData) {
+  const conventionId = Number(form.get("conventionId"));
+  const editionId = Number(form.get("editionId"));
+  const kind = String(form.get("kind") ?? "");
+  if (!isReminderKind(kind)) fail(`/cons/${conventionId}`, { ok: false, error: "Choose a reminder date." });
+  const result = disableReminder(openDatabase(), editionId, kind);
+  if (!result.ok) fail(`/cons/${conventionId}`, result);
+  revalidateWorkspace(conventionId);
+  kickCalendarSync();
+  redirect(`/cons/${conventionId}`);
+}
+
+export async function retryCalendarSyncAction(form: FormData) {
+  const conventionId = Number(form.get("conventionId"));
+  const syncId = Number(form.get("syncId"));
+  const result = retryCalendarSync(openDatabase(), syncId);
+  if (!result.ok) fail(`/cons/${conventionId}`, result);
+  revalidateWorkspace(conventionId);
+  kickCalendarSync();
+  redirect(`/cons/${conventionId}`);
 }

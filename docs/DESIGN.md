@@ -34,7 +34,7 @@ Rules for every milestone:
 | M4.8 | done | Auto-fill empty edition dates from application or event start. |
 | M4.9 | done | Set empty submitted/result dates when status transitions. |
 | M4.10 | done | Convention titles link to the website when one is set. |
-| M5 | not started | Google connection and explicitly enabled Calendar reminders. |
+| M5 | done | Google connection and explicitly enabled Calendar reminders. |
 | M6 | not started | Durable Jobs view and per-job result review. |
 | M7 | not started | Manually started Gmail scan jobs. |
 | M8 | not started | Manually started website fetch jobs. |
@@ -1037,6 +1037,8 @@ M1–M3 below are preserved as historical records of what was built, including t
 - Without credentials, the rest of the app runs and Settings explains how to connect. A live test user check is optional when credentials are present.
 
 **Out of scope:** Reading Gmail and in-app date notices.
+
+**Completion note — 2026-11-09:** Schema `0006` adds reminder flags, `setting`, `google_credential`, and `calendar_sync`. Settings shows disconnected copy and env setup; `/cons/[id]` has Add/Remove reminder outside Save edition. Outbox coalesces create/patch/delete; worker retries with an injectable fake Calendar client. Browser: `[MOCK] Reminder Con` / `mock-2027` saved dates with no reminder; Add reminder queued (“Connect Google in Settings to sync”); date change kept one create; Remove cancelled it; re-add then clear application start disabled the flag. Settings: Google not connected. Live Google was not connected. Next agent: M6 Jobs only. `OWNER_EMAIL` / Google client keys were unset in this checkout.
 
 ### M6 — Jobs and review
 

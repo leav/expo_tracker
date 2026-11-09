@@ -43,6 +43,13 @@
       "when": 1794100000000,
       "tag": "0005_edition_location_on_con",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794251317259,
+      "tag": "0006_calendar_reminders",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
-import { aliases, conventions } from "../db/schema";
+import { aliases, conventions, editions } from "../db/schema";
+import { queueDeletesForEdition } from "./calendarSync";
 import { pickAttendanceValue, pickRepresentativeEdition } from "./cons";
 import type { DomainResult, TrackerDb } from "./db";
 import { resolveDriveTime, seedDriveMinutes } from "./driveTime";
@@ -101,6 +102,10 @@ export function updateConvention(
 export function deleteConvention(db: TrackerDb, id: number): DomainResult<{ id: number }> {
   const current = db.select({ id: conventions.id }).from(conventions).where(eq(conventions.id, id)).get();
   if (!current) return { ok: false, error: "That convention is gone." };
+  const editionRows = db.select({ id: editions.id }).from(editions).where(eq(editions.conventionId, id)).all();
+  for (const edition of editionRows) {
+    queueDeletesForEdition(db, edition.id);
+  }
   db.delete(conventions).where(eq(conventions.id, id)).run();
   return { ok: true, value: { id } };
 }
