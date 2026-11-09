@@ -250,8 +250,8 @@ function BoardColumns({
 
 function columnClass(emphasized: boolean, isOver: boolean) {
   return cn(
-    "flex min-h-[24rem] min-w-64 flex-1 flex-col gap-2 rounded-xl border p-3",
-    emphasized ? "border-foreground/40 bg-card" : "border-border bg-muted/20",
+    "flex min-h-[24rem] min-w-64 flex-1 flex-col gap-2 rounded-xl border border-border p-3",
+    emphasized ? "bg-card" : "bg-muted/20",
     isOver ? "ring-2 ring-foreground/40" : "",
   );
 }
