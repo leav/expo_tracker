@@ -1,4 +1,4 @@
-# Vendor Tracker
+# Expo Tracker
 
 Local app for tracking artist-alley applications to recurring cons and expos. A convention is a stable series. Each year (or season, or Comiket number) is an edition. Automation only files items that need a decision: an opening date was announced, applications are open, or an email accepted, rejected, or waitlisted you. Nothing is written to the board until you approve it.
 
@@ -28,9 +28,3 @@ Reminders are opt-in. Saving an edition date does not create a Google event. On 
 Use a personal Google Cloud project with the OAuth consent screen in **Testing**. Do not publish the app for verification. Add **your own Gmail** as a test user; Google OAuth will not let you sign in until that address is on the list. Put the Web client ID, client secret, and a `SESSION_SECRET` in `.env.local`. Optional: set `OWNER_EMAIL` so only that Google account can connect.
 
 When those keys are missing, **Settings** shows the full walkthrough (enable Gmail and Calendar APIs, Testing consent, test user, Web client, redirect URI `http://127.0.0.1:4747/api/google/callback`). After you restart `pnpm dev`, open [http://127.0.0.1:4747/settings](http://127.0.0.1:4747/settings) — not localhost — and connect. Disconnect keeps local reminder flags and stored event ids and stops Calendar calls.
-
-Intended checkout on the owner's Mac:
-
-```text
-/Users/songye/Development/vendor_tracker
-```
