@@ -50,6 +50,13 @@
       "when": 1794251317259,
       "tag": "0006_calendar_reminders",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794300000000,
+      "tag": "0007_ics_drop_google",
+      "breakpoints": true
     }
   ]
 }

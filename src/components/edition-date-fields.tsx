@@ -1,5 +1,6 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
 import type { ChangeEvent, FocusEvent } from "react";
 import { fillEditionDates } from "../domain/editionDates";
 
@@ -11,7 +12,23 @@ type DateDefaults = {
   endDate?: string;
 };
 
-export function EditionDateFields({ defaults = {} }: { defaults?: DateDefaults }) {
+export type CalendarHrefs = {
+  icsHref: string;
+  googleHref: string;
+};
+
+export function EditionDateFields({
+  defaults = {},
+  calendar,
+  fieldIdPrefix,
+}: {
+  defaults?: DateDefaults;
+  calendar?: {
+    applicationStart?: CalendarHrefs;
+    eventStart?: CalendarHrefs;
+  };
+  fieldIdPrefix?: string;
+}) {
   function blankToNull(value: string) {
     return value.trim() === "" ? null : value;
   }
@@ -58,17 +75,21 @@ export function EditionDateFields({ defaults = {} }: { defaults?: DateDefaults }
         defaultValue={defaults.applicationStartDate}
         onChange={onStartCommit}
         onBlur={onStartCommit}
+        calendar={calendar?.applicationStart}
+        fieldIdPrefix={fieldIdPrefix}
       />
-      <DateField label="Application end" name="applicationEndDate" defaultValue={defaults.applicationEndDate} />
+      <DateField label="Application end" name="applicationEndDate" defaultValue={defaults.applicationEndDate} fieldIdPrefix={fieldIdPrefix} />
       <DateField
         label="Event start"
         name="startDate"
         defaultValue={defaults.startDate}
         onChange={onStartCommit}
         onBlur={onStartCommit}
+        calendar={calendar?.eventStart}
+        fieldIdPrefix={fieldIdPrefix}
       />
-      <DateField label="Event end" name="endDate" defaultValue={defaults.endDate} />
-      <DateField label="Result" name="resultDate" defaultValue={defaults.resultDate} />
+      <DateField label="Event end" name="endDate" defaultValue={defaults.endDate} fieldIdPrefix={fieldIdPrefix} />
+      <DateField label="Result" name="resultDate" defaultValue={defaults.resultDate} fieldIdPrefix={fieldIdPrefix} />
     </>
   );
 }
@@ -79,17 +100,42 @@ function DateField({
   defaultValue,
   onChange,
   onBlur,
+  calendar,
+  fieldIdPrefix,
 }: {
   label: string;
   name: string;
   defaultValue?: string;
   onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (event: FocusEvent<HTMLInputElement>) => void;
+  calendar?: CalendarHrefs;
+  fieldIdPrefix?: string;
 }) {
+  const inputId = fieldIdPrefix ? `${fieldIdPrefix}-${name}` : name;
   return (
-    <label className="grid gap-1 text-sm">
-      {label}
+    <div className="grid gap-1 text-sm">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <label htmlFor={inputId}>{label}</label>
+        {calendar ? (
+          <>
+            <a href={calendar.icsHref} className="text-xs underline underline-offset-2">
+              Download .ics
+            </a>
+            <a
+              href={calendar.googleHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 text-xs underline underline-offset-2 hover:text-foreground"
+            >
+              Google Calendar
+              <ExternalLink className="size-3 shrink-0" aria-hidden />
+              <span className="sr-only">(opens Google Calendar)</span>
+            </a>
+          </>
+        ) : null}
+      </div>
       <input
+        id={inputId}
         name={name}
         type="date"
         defaultValue={defaultValue ?? ""}
@@ -97,6 +143,6 @@ function DateField({
         onBlur={onBlur}
         className="h-9 rounded-md border border-input bg-background px-2"
       />
-    </label>
+    </div>
   );
 }

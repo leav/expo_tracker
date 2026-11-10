@@ -77,10 +77,6 @@ describe("sheet import apply", () => {
     const fanime27 = fanimeEditions.find((row) => row.cycleLabel === "2027");
     assert.equal(fanime27?.applicationStartDate, "2026-11-08");
     assert.equal(fanime27?.status, "waiting_to_apply");
-    assert.equal(fanime27?.startDateCalendarEventId, null);
-    assert.equal(fanime27?.applicationStartDateCalendarEventId, null);
-    assert.equal(fanime27?.startReminderEnabled, false);
-    assert.equal(fanime27?.applicationStartReminderEnabled, false);
 
     const sacanimeEditions = db.select().from(editions).where(eq(editions.conventionId, sacanime?.id ?? 0)).all();
     assert.equal(sacanimeEditions.length, 2);

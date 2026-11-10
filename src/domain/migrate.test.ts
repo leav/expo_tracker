@@ -292,3 +292,51 @@ describe("0006 calendar reminders migration", () => {
     assert.equal(tables.includes("calendar_sync"), true);
   });
 });
+
+describe("0007 ics drop google migration", () => {
+  let sqlite: Database.Database;
+
+  before(() => {
+    sqlite = new Database(":memory:");
+    for (const name of [
+      "0000_powerful_lenny_balinger.sql",
+      "0001_import_review.sql",
+      "0002_core_workspace.sql",
+      "0003_city_state_only.sql",
+      "0004_skipped_status.sql",
+      "0005_edition_location_on_con.sql",
+      "0006_calendar_reminders.sql",
+    ]) {
+      sqlite.exec(sqlFile(name));
+    }
+    sqlite.exec(sqlFile("0007_ics_drop_google.sql"));
+  });
+
+  after(() => {
+    sqlite.close();
+  });
+
+  it("drops google tables and reminder columns", () => {
+    const tables = (sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
+      (row) => row.name,
+    );
+    assert.equal(tables.includes("google_credential"), false);
+    assert.equal(tables.includes("calendar_sync"), false);
+    assert.equal(tables.includes("setting"), true);
+
+    const editionColumns = (
+      sqlite.prepare("PRAGMA table_info(edition)").all() as { name: string }[]
+    ).map((row) => row.name);
+    assert.equal(editionColumns.includes("start_reminder_enabled"), false);
+    assert.equal(editionColumns.includes("application_start_reminder_enabled"), false);
+    assert.equal(editionColumns.includes("start_date_calendar_event_id"), false);
+    assert.equal(editionColumns.includes("application_start_date_calendar_event_id"), false);
+
+    const settingColumns = (
+      sqlite.prepare("PRAGMA table_info(setting)").all() as { name: string }[]
+    ).map((row) => row.name);
+    assert.equal(settingColumns.includes("owner_email"), false);
+    assert.equal(settingColumns.includes("calendar_id"), false);
+    assert.equal(settingColumns.includes("drive_limit_hours"), true);
+  });
+});

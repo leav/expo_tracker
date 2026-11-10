@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { GoogleCalendarMark } from "../../components/google-calendar-mark";
-import { hrefForGoogleCalendarEvent } from "../../domain/googleCalendarEvent";
 import {
   buildMonthCells,
   canShiftYear,
@@ -15,7 +13,6 @@ import {
   type ScheduleKind,
   type ScheduleMarker,
 } from "../../domain/schedule";
-import { getGoogleConnection, getSettings } from "../../domain/settings";
 import { todayInLosAngeles } from "../../domain/status";
 import { openDatabase } from "../../db";
 
@@ -46,12 +43,7 @@ export default async function CalendarPage({
   const currentYear = today.slice(0, 4);
   const currentYearMonth = today.slice(0, 7);
   const year = parseYear(params.year, today);
-  const db = openDatabase();
-  const markers = listScheduleMarkers(db);
-  const settings = getSettings(db);
-  const google = getGoogleConnection(db);
-  const calendarId = settings.calendarId;
-  const ownerEmail = google?.email ?? settings.ownerEmail;
+  const markers = listScheduleMarkers(openDatabase());
   const previousYear = shiftYear(year, -1);
   const nextYear = shiftYear(year, 1);
   const previousDisabled = !canShiftYear(markers, year, -1);
@@ -132,8 +124,6 @@ export default async function CalendarPage({
             markers={markers}
             today={today}
             isCurrentMonth={yearMonth === currentYearMonth}
-            calendarId={calendarId}
-            ownerEmail={ownerEmail}
           />
         ))}
       </div>
@@ -146,15 +136,11 @@ function MonthCard({
   markers,
   today,
   isCurrentMonth,
-  calendarId,
-  ownerEmail,
 }: {
   yearMonth: string;
   markers: ScheduleMarker[];
   today: string;
   isCurrentMonth: boolean;
-  calendarId: string;
-  ownerEmail: string | null;
 }) {
   const byDay = markersForMonth(markers, yearMonth);
   const cells = buildMonthCells(yearMonth);
@@ -200,40 +186,19 @@ function MonthCard({
               </span>
               <div className="flex flex-col gap-0.5">
                 {dayMarkers.map((marker) => {
-                  const googleHref = hrefForGoogleCalendarEvent({
-                    eventId: marker.googleEventId,
-                    calendarId,
-                    ownerEmail,
-                  });
                   const title = `${marker.conventionName} ${marker.cycleLabel} · ${marker.kindLabel}`;
                   return (
-                    <div
+                    <Link
                       key={`${marker.editionId}-${marker.kind}`}
-                      className={`flex overflow-hidden rounded border leading-snug ${chipClass(marker.kind)}`}
+                      href={`/cons/${marker.conventionId}`}
+                      className={`block overflow-hidden rounded border px-0.5 py-0.5 leading-snug ${chipClass(marker.kind)}`}
+                      title={title}
                     >
-                      <Link
-                        href={`/cons/${marker.conventionId}`}
-                        className="min-w-0 flex-1 px-0.5 py-0.5"
-                        title={title}
-                      >
-                        <span className="block truncate font-medium">
-                          {marker.conventionName} {marker.cycleLabel}
-                        </span>
-                        <span className="block truncate">{marker.kindLabel}</span>
-                      </Link>
-                      {googleHref ? (
-                        <a
-                          href={googleHref}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label="Open in Google Calendar"
-                          title="Open in Google Calendar"
-                          className="flex items-center px-0.5"
-                        >
-                          <GoogleCalendarMark />
-                        </a>
-                      ) : null}
-                    </div>
+                      <span className="block truncate font-medium">
+                        {marker.conventionName} {marker.cycleLabel}
+                      </span>
+                      <span className="block truncate">{marker.kindLabel}</span>
+                    </Link>
                   );
                 })}
               </div>

@@ -35,12 +35,6 @@ export const editions = sqliteTable(
     endDate: text("end_date"),
     applicationStartDate: text("application_start_date"),
     applicationEndDate: text("application_end_date"),
-    startDateCalendarEventId: text("start_date_calendar_event_id"),
-    applicationStartDateCalendarEventId: text("application_start_date_calendar_event_id"),
-    startReminderEnabled: integer("start_reminder_enabled", { mode: "boolean" }).notNull().default(false),
-    applicationStartReminderEnabled: integer("application_start_reminder_enabled", { mode: "boolean" })
-      .notNull()
-      .default(false),
     status: text("status").notNull(),
     submittedAt: text("submitted_at"),
     resultDate: text("result_date"),
@@ -70,31 +64,6 @@ export const importProposals = sqliteTable("import_proposal", {
 
 export const settings = sqliteTable("setting", {
   id: integer("id").primaryKey(),
-  ownerEmail: text("owner_email"),
   timezone: text("timezone").notNull().default("America/Los_Angeles"),
   driveLimitHours: integer("drive_limit_hours").notNull().default(12),
-  calendarId: text("calendar_id").notNull().default("primary"),
-});
-
-export const googleCredentials = sqliteTable("google_credential", {
-  id: integer("id").primaryKey(),
-  email: text("email").notNull(),
-  refreshToken: text("refresh_token").notNull(),
-  accessToken: text("access_token"),
-  expiry: integer("expiry"),
-  scopes: text("scopes").notNull(),
-  historyId: text("history_id"),
-});
-
-export const calendarSync = sqliteTable("calendar_sync", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  editionId: integer("edition_id").references(() => editions.id, { onDelete: "set null" }),
-  reminderKind: text("reminder_kind").notNull(),
-  action: text("action").notNull(),
-  googleEventId: text("google_event_id"),
-  state: text("state").notNull().default("queued"),
-  attempts: integer("attempts").notNull().default(0),
-  lastError: text("last_error"),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
 });

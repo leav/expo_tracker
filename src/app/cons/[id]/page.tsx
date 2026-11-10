@@ -11,16 +11,14 @@ import {
 } from "../../actions";
 import { ConfirmForm } from "../../../components/confirm-form";
 import { ConventionTitle } from "../../../components/convention-title";
-import { EditionDateFields } from "../../../components/edition-date-fields";
-import { EditionReminders } from "../../../components/edition-reminders";
+import { EditionDateFields, type CalendarHrefs } from "../../../components/edition-date-fields";
 import { InterestHearts } from "../../../components/interest-hearts";
 import { Button } from "../../../components/ui/button";
-import { listOpenCalendarSyncByEdition, type CalendarSyncRow } from "../../../domain/calendarSync";
+import { calendarEventTitle, type ReminderKind } from "../../../domain/calendarEvent";
 import { interestStatusCounts } from "../../../domain/cons";
 import { getSeries } from "../../../domain/editions";
-import { getGoogleConnection, getSettings } from "../../../domain/settings";
+import { hrefForGoogleCalendarTemplate } from "../../../domain/ics";
 import { isPaidStatus, isStatus, statusLabels, statuses } from "../../../domain/status";
-import type { ReminderKind } from "../../../domain/calendarEvent";
 import { openDatabase } from "../../../db";
 import type { editions } from "../../../db/schema";
 
@@ -42,15 +40,6 @@ export default async function ConsDetailPage({
   if (!series) notFound();
   const convention = series.convention;
   const statusCounts = interestStatusCounts(series.editions);
-  const settings = getSettings(db);
-  const google = getGoogleConnection(db);
-  const googleConnected = google != null;
-  const calendarId = settings.calendarId;
-  const ownerEmail = google?.email ?? settings.ownerEmail;
-  const syncByEdition = listOpenCalendarSyncByEdition(
-    db,
-    series.editions.map((edition) => edition.id),
-  );
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
@@ -171,14 +160,7 @@ export default async function ConsDetailPage({
           <p className="text-sm text-muted-foreground">No editions yet. Add the first cycle below.</p>
         ) : null}
         {series.editions.map((edition) => (
-          <EditionForm
-            key={edition.id}
-            edition={edition}
-            googleConnected={googleConnected}
-            calendarId={calendarId}
-            ownerEmail={ownerEmail}
-            sync={syncByEdition.get(edition.id) ?? {}}
-          />
+          <EditionForm key={edition.id} edition={edition} conventionName={convention.displayName} />
         ))}
         <form action={createEditionAction} className="grid gap-3 rounded-lg border border-dashed p-4">
           <h3 className="font-medium">Add edition</h3>
@@ -197,16 +179,10 @@ export default async function ConsDetailPage({
 
 function EditionForm({
   edition,
-  googleConnected,
-  calendarId,
-  ownerEmail,
-  sync,
+  conventionName,
 }: {
   edition: typeof editions.$inferSelect;
-  googleConnected: boolean;
-  calendarId: string;
-  ownerEmail: string | null;
-  sync: Partial<Record<ReminderKind, CalendarSyncRow>>;
+  conventionName: string;
 }) {
   const status = isStatus(edition.status) ? edition.status : "unknown";
   const showPaid = isPaidStatus(status);
@@ -220,12 +196,29 @@ function EditionForm({
           <Field label="Cycle" name="cycleLabel" defaultValue={edition.cycleLabel} required />
           <SelectField label="Status" name="status" value={status} />
           <EditionDateFields
+            fieldIdPrefix={`edition-${edition.id}`}
             defaults={{
               applicationStartDate: edition.applicationStartDate ?? "",
               applicationEndDate: edition.applicationEndDate ?? "",
               resultDate: edition.resultDate ?? "",
               startDate: edition.startDate ?? "",
               endDate: edition.endDate ?? "",
+            }}
+            calendar={{
+              applicationStart: calendarLinksForDate(
+                edition.id,
+                "application_start",
+                edition.applicationStartDate,
+                conventionName,
+                edition.cycleLabel,
+              ),
+              eventStart: calendarLinksForDate(
+                edition.id,
+                "start",
+                edition.startDate,
+                conventionName,
+                edition.cycleLabel,
+              ),
             }}
           />
           <Field label="Submitted" name="submittedAt" type="date" defaultValue={edition.submittedAt ?? ""} />
@@ -246,20 +239,6 @@ function EditionForm({
           </label>
         ) : null}
       </form>
-      <EditionReminders
-        conventionId={edition.conventionId}
-        editionId={edition.id}
-        applicationStartDate={edition.applicationStartDate}
-        startDate={edition.startDate}
-        applicationStartReminderEnabled={edition.applicationStartReminderEnabled}
-        startReminderEnabled={edition.startReminderEnabled}
-        applicationStartGoogleEventId={edition.applicationStartDateCalendarEventId}
-        startGoogleEventId={edition.startDateCalendarEventId}
-        calendarId={calendarId}
-        ownerEmail={ownerEmail}
-        sync={sync}
-        googleConnected={googleConnected}
-      />
       <div className="flex items-center justify-between">
         <Button type="submit" form={saveFormId}>
           Save edition
@@ -310,6 +289,24 @@ function Field({
       />
     </label>
   );
+}
+
+function calendarLinksForDate(
+  editionId: number,
+  kind: ReminderKind,
+  date: string | null,
+  conventionName: string,
+  cycleLabel: string,
+): CalendarHrefs | undefined {
+  const googleHref = hrefForGoogleCalendarTemplate({
+    title: calendarEventTitle(kind, conventionName, cycleLabel),
+    date,
+  });
+  if (!googleHref) return undefined;
+  return {
+    icsHref: `/api/ics/${editionId}?kind=${kind}`,
+    googleHref,
+  };
 }
 
 function SelectField({

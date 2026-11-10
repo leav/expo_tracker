@@ -35,8 +35,9 @@ Rules for every milestone:
 | M4.9 | done | Set empty submitted/result dates when status transitions. |
 | M4.10 | done | Convention titles link to the website when one is set. |
 | M5 | done | Google connection and explicitly enabled Calendar reminders. |
+| M5.1 | done | Per-date `.ics` download; no Google Cloud or Gmail. |
 | M6 | not started | Durable Jobs view and per-job result review. |
-| M7 | not started | Manually started Gmail scan jobs. |
+| M7 | cancelled | Gmail scan jobs. No Google Cloud or Gmail API. |
 | M8 | not started | Manually started website fetch jobs. |
 | M9 | not started | Extract application updates from websites and pasted text. |
 | M10 | not started | Manually started Discord channel jobs. |
@@ -46,7 +47,7 @@ Rules for every milestone:
 
 - **Product rules:** [Product](#product), [Locked decisions](#locked-decisions), and [Out of scope](#out-of-scope).
 - **Data and behavior:** [Domain model](#domain-model), [Status vocabulary](#status-vocabulary), and [Jobs and review](#jobs-and-review).
-- **Automation:** [Job types](#job-types), [Calendar](#calendar), [Discovery and drive time](#discovery-and-drive-time), and [Google OAuth](#google-oauth).
+- **Automation:** [Job types](#job-types), [Calendar](#calendar), and [Discovery and drive time](#discovery-and-drive-time).
 - **Implementation:** [Module map](#module-map), [Environment](#environment), [Milestones](#milestones), and [Testing](#testing).
 
 ## Product
@@ -58,7 +59,7 @@ The owner applies to artist alleys at conventions that repeat every year. The cu
 - one row per convention edition;
 - the year embedded in the convention name;
 - inconsistent status terms; and
-- links mixed across websites, application forms, Discord, and Gmail.
+- links mixed across websites, application forms, and Discord.
 
 The app replaces that sheet as the place to edit. The sheet is imported once and then left as an archive. There is no sync back to Google Sheets.
 
@@ -66,9 +67,9 @@ The app replaces that sheet as the place to edit. The sheet is imported once and
 
 - **Cons** is the stable catalog. It uses a compact grid with one tile per convention.
 - **Lineups** is a five-column board of active editions, grouped by status and ordered by each column's action date.
-- **Calendar** is a year grid of application-start and event-start dates for conventions with interest above zero. Application opens are yellow; con starts are green. It is not an alarm and does not create Google Calendar events.
-- **Jobs** is where the owner starts Gmail, website, pasted-text, Discord, or discovery work and later reviews each job's results.
-- **Settings** holds the Google connection and app-wide configuration.
+- **Calendar** is a year grid of application-start and event-start dates for conventions with interest above zero. Application opens are yellow; con starts are green. It is not an alarm. The owner downloads a `.ics` file from an edition date when they want that date in a calendar app.
+- **Jobs** is where the owner starts website, pasted-text, Discord, or discovery work and later reviews each job's results.
+- **Settings** holds app-wide configuration such as drive-limit hours.
 - **Import** remains a setup tool and is not permanent primary navigation.
 
 ### What jobs detect
@@ -77,7 +78,7 @@ Jobs look for only three actionable signals:
 
 1. A con announced an application opening date.
 2. Applications are open now.
-3. An email says the owner was approved, rejected, or waitlisted.
+3. Pasted text of an acceptance, rejection, or waitlist message.
 
 Everything else on a con or edition is edited manually.
 
@@ -89,16 +90,13 @@ External collection runs only when the owner submits one or more jobs. Each job 
 flowchart LR
   owner[Owner] --> submit[Submit one or more jobs]
   submit --> queue[Durable job queue]
-  queue --> mail[Gmail job]
   queue --> page[Website job]
   queue --> text[Pasted-text job]
-  mail --> results[Job results]
-  page --> results
+  page --> results[Job results]
   text --> results
   results --> decision{Owner review}
   decision -->|Apply selected| editions[Editions]
   decision -->|Dismiss| nochange[No edition change]
-  editions -. enabled reminder changed .-> calendar[Calendar sync outbox]
 ```
 
 ## Locked decisions
@@ -107,35 +105,36 @@ These choices are settled and should not be reopened during implementation.
 
 ### Scope and ownership
 
-- **Single owner:** No accounts, roles, or sharing. The first connected Google account becomes the owner. If `OWNER_EMAIL` is set, OAuth must match it.
+- **Single owner:** No accounts, roles, or sharing. The app runs for one person on their machine.
 - **Artist alley only:** An edition represents the owner's artist-alley application for one occurrence. If a page lists both dealer and artist-alley dates, use the artist-alley dates. Treat a generic vendor page as low confidence.
 - **English UI, preserved names:** Map Chinese sheet statuses during import, but preserve imported display names, including Chinese names.
 
 ### Runtime and automation
 
 - **Local app:** Run a Next.js UI and a worker from one repository, with SQLite on the owner's machine. This is not a hosted multi-user service.
-- **Manual collection:** Gmail, websites, pasted text, Discord, and discovery run only in jobs the owner submits. There is no polling schedule.
+- **Manual collection:** Websites, pasted text, Discord, and discovery run only in jobs the owner submits. There is no polling schedule. Decision emails are pasted, not scanned from a mailbox.
 - **Human application:** A job result never writes a status or date directly. The owner applies or dismisses results from that job.
 - **Durable jobs:** Queued and running jobs survive navigation and app restarts. They resume when the local worker runs again.
-- **No Inbox:** Jobs own result review, Lineups owns upcoming work, and Google Calendar owns alerts.
+- **No Inbox:** Jobs own result review, Lineups owns upcoming work, and the owner's calendar app owns alerts via downloaded `.ics` files.
 - **Discord bot only:** Use an invited bot on explicitly configured channel IDs. Never use a self-bot or the owner's user token.
 
 ### Reminders and discovery
 
-- **Calendar reminders are opt-in:** Saving a convention start date or application open date does not create an event. The owner explicitly adds a reminder for either date.
-- **Enabled reminders stay synchronized:** Once added, a reminder follows later edits to that date until the owner removes it.
+- **Calendar files are opt-in:** Saving a convention start date or application open date does not create a calendar event. The owner downloads a `.ics` file for either date when they want it in a calendar app. The file is a snapshot; a later download is a new import.
 - **Drive range:** "Local" means at most 12 hours of driving from San Mateo, CA. Discovery defaults to that range and puts farther conventions in a second list. The owner may still track a fly-to convention.
 
 ## Out of scope
 
 - Submitting applications automatically.
-- Writing status from a scrape or an email without a button press.
-- Scheduled polling of Gmail, websites, Discord, or discovery sources.
-- Automatically adding Calendar reminders merely because a date was saved or applied.
+- Writing status from a scrape or pasted text without a button press.
+- Scheduled polling of websites, Discord, or discovery sources.
+- Automatically downloading or importing calendar files merely because a date was saved or applied.
+- Google Cloud, Google OAuth, the Gmail API, or connecting a Google account.
+- Scanning Gmail or any other mailbox.
 - Dealer, exhibitor, or maker-fair workflows.
 - Facebook, Instagram, or other social scraping.
 - Polling attendance, fees, or table counts.
-- Payment detection. Payment sentences can appear in an email quote, but no job proposes `paid`. The owner can mark an approved application paid by hand.
+- Payment detection. Payment sentences can appear in a pasted quote, but no job proposes `paid`. The owner can mark an approved application paid by hand.
 - Two-way sync with the Google Sheet.
 - A public API, mobile client, or multi-user auth.
 
@@ -146,22 +145,21 @@ Two entry points, one database:
 | Process | Command | Role |
 | --- | --- | --- |
 | Web UI | `pnpm dev` | Cons, Lineups, Calendar, Jobs, Import, Discovery, and Settings. Port **4747**, bound to `127.0.0.1`. |
-| Worker | started with the server, also `pnpm worker` | Claims queued jobs and retries Calendar synchronization. |
+| Worker | started with the server, also `pnpm worker` | Claims queued jobs. |
 
 ```mermaid
 flowchart TB
   browser[Browser] --> web[Next.js web UI]
   web --> db[(SQLite)]
-  web --> google[Google OAuth and Calendar]
   web -. starts once .-> worker[Worker loop]
   cli[pnpm worker] -. debugging entry point .-> worker
   worker --> db
-  worker --> sources[Gmail, websites, Discord, AnimeCons]
+  worker --> sources[Websites, Discord, AnimeCons]
 ```
 
 The server starts the worker once from Next.js `instrumentation.ts`. A global guard prevents hot reload from starting a second loop. `pnpm worker` runs the same queue consumer for debugging. A job that lacks required credentials fails with a clear error; unrelated jobs continue.
 
-Laptop sleep is expected. Queued and unfinished jobs remain in SQLite and resume the next time the app is running. Calendar alarms still fire after an event is created. An always-on `launchd` agent is optional and not part of v1.
+Laptop sleep is expected. Queued and unfinished jobs remain in SQLite and resume the next time the app is running. Calendar alarms fire in the owner's calendar app after they import a downloaded `.ics` file. An always-on `launchd` agent is optional and not part of v1.
 
 ### Local files
 
@@ -187,7 +185,7 @@ The core hierarchy is:
 - An **alias** is another name for the same series, such as `ALA` for Animé Los Angeles.
 - A **source** is an optional saved input for a future job. It belongs to a convention or a specific edition.
 - A **job** is one manually requested unit of external collection or analysis.
-- A **job result** is an evidence-backed proposed change produced by one job. It may remain unassigned when a Gmail message is ambiguous.
+- A **job result** is an evidence-backed proposed change produced by one job. It may remain unassigned when a pasted message is ambiguous.
 
 ```mermaid
 erDiagram
@@ -198,8 +196,6 @@ erDiagram
   Source o|--o{ Job : seeds
   Job ||--o{ JobResult : produces
   Edition o|--o{ JobResult : targets
-  Edition ||--o{ CalendarEvent : enables
-  Convention ||--o{ SenderRule : recognizes
   DiscoveryCandidate }o--o| Convention : "may match"
 ```
 
@@ -256,7 +252,7 @@ Another name for a convention that remains different after applying the edition 
 
 #### Normalization
 
-One function computes `normalized` for both convention display names and aliases. Import, Gmail, and discovery all use it:
+One function computes `normalized` for both convention display names and aliases. Import, jobs, and discovery all use it:
 
 - Unicode casefold and strip Latin diacritics, so `Animé` matches `Anime`.
 - Remove punctuation and interior spaces.
@@ -292,10 +288,6 @@ One occurrence of a convention. Example cycle labels are `2027`, `2027-winter`, 
 | start_date, end_date | When the event runs. The sheet often has only a start. End may be null. |
 | application_start_date | Day artist-alley applications open. Null until known. |
 | application_end_date | Day they close. Null until known. |
-| start_reminder_enabled | True only after the owner explicitly adds the event-start reminder. |
-| application_start_reminder_enabled | True only after the owner explicitly adds the application-start reminder. |
-| start_date_calendar_event_id | Google event id for `start_date`. Null until created. |
-| application_start_date_calendar_event_id | Google event id for `application_start_date`. Null until created. |
 | status | See the status vocabulary. |
 | submitted_at, result_date | Dates. `result_date` is expected while Submitted/Waitlisted and actual after a decision. |
 | paid | The owner toggles this on an Approved or Attended edition. No job sets it. |
@@ -304,13 +296,10 @@ One occurrence of a convention. Example cycle labels are `2027`, `2027-winter`, 
 #### Date behavior
 
 - Saved dates appear in Lineups according to the action-date rules below. There are no clock notices.
-- Saving or applying a date never enables a reminder.
-- The owner may explicitly add a Google Calendar reminder for `start_date` or `application_start_date`.
-- Once enabled, later edits to that date queue a patch to the stored Google event.
-- Clearing an enabled date deletes its event and disables that reminder.
-- `end_date` and `application_end_date` never create calendar events.
-- Import writes dates but leaves both calendar event IDs null.
-- A job result that changes a reminder-enabled date applies its database change first and queues retryable Calendar synchronization.
+- Saving or applying a date never creates a calendar file.
+- The owner may download a `.ics` file for `start_date` or `application_start_date` when that date is set.
+- `end_date` and `application_end_date` never produce calendar files.
+- Import writes dates and does not generate calendar files.
 
 #### Edition identity
 
@@ -326,9 +315,9 @@ A source is optional reusable input for a manually started job. Saving one does 
 | Field | Notes |
 | --- | --- |
 | convention_id, edition_id | At least one is set. Edition-specific forms should target the edition; stable homepages may target only the convention. |
-| kind | `html`, `eventeny`, `eventhub`, `google_form`, `gmail_query`, or `discord_channel`. |
+| kind | `html`, `eventeny`, `eventhub`, `google_form`, or `discord_channel`. |
 | label | Owner-facing name. |
-| target | URL, Gmail query, or Discord channel ID. |
+| target | URL or Discord channel ID. |
 | created_at, updated_at | |
 
 A job may instead use one-off input. Every job copies its effective source kind, target, edition context, and options into `input_json`, so editing a saved source cannot change a past job.
@@ -339,7 +328,7 @@ One unit of work. A single submit action may insert several jobs in one transact
 
 | Field | Notes |
 | --- | --- |
-| kind | `gmail`, `website`, `pasted_text`, `discord`, or `discovery`. |
+| kind | `website`, `pasted_text`, `discord`, or `discovery`. |
 | source_id | Nullable for one-off jobs. |
 | input_json | Immutable snapshot of job inputs and edition context. |
 | state | `queued`, `running`, `needs_review`, `done`, or `failed`. |
@@ -356,7 +345,7 @@ The Jobs view groups all jobs by state. The worker claims queued jobs with a lea
 | job_id | Originating job. |
 | edition_id | Nullable until the owner assigns an ambiguous result. |
 | kind | `opening_date`, `applications_open`, or `decision`. |
-| dedupe_key | Stable source identity, such as Gmail message id or source plus snapshot hash and proposal kind. |
+| dedupe_key | Stable source identity, such as source plus snapshot hash and proposal kind. |
 | proposal_json | Dates, `open`, or `approved` / `rejected` / `waitlisted`. |
 | evidence_quote, evidence_url | What the owner reads before applying. |
 | confidence | `high` or `low`. |
@@ -365,17 +354,14 @@ The Jobs view groups all jobs by state. The worker claims queued jobs with a lea
 
 A completed execution with no proposed changes goes directly to `done`. A job with any pending result moves to `needs_review`; it becomes `done` only when every result is applied or dismissed.
 
-`dedupe_key` is unique across job results. When a later job finds the same Gmail message or the same source snapshot and proposal, it reports **Already seen in job …** and neither moves nor duplicates the original result.
+`dedupe_key` is unique across job results. When a later job finds the same source snapshot and proposal, it reports **Already seen in job …** and neither moves nor duplicates the original result.
 
 ### Other tables
 
-- `sender_rule`: email domain → convention id, created when the owner assigns an ambiguous Gmail result.
 - `snapshot`: source or job id, fetched_at, content hash, extracted text. Keep the latest few per source.
-- `calendar_sync`: edition id, reminder kind, action (`create`, `patch`, `delete`), state, attempts, last error.
 - `discovery_candidate`: external id, name, dates, city, drive minutes, state `new` / `tracked` / `ignored`.
 - `drive_time`: city key → minutes, source (`seed` or `manual`).
-- `google_credential`: single row, refresh token, scopes, and Gmail history cursor.
-- `setting`: owner email, timezone, drive-limit hours (default 12), calendar id.
+- `setting`: timezone and drive-limit hours (default 12).
 
 ## Status vocabulary
 
@@ -469,7 +455,7 @@ Clicking a job opens all of its results and evidence. The owner may assign an am
 
 | Result kind | Apply writes |
 | --- | --- |
-| `opening_date` | Set `application_start_date` and, when proposed, `application_end_date`. Leave status unchanged. Do not enable a Calendar reminder. |
+| `opening_date` | Set `application_start_date` and, when proposed, `application_end_date`. Leave status unchanged. Do not create a calendar file. |
 | `applications_open` | Set status to `open` only when the current status is `unknown`, `waiting_to_apply`, or `open`. |
 | `decision` | Set status to proposed `approved`, `rejected`, or `waitlisted`, and set `result_date` from the message date. |
 
@@ -480,7 +466,7 @@ Required behavior:
 - Two selected results that propose incompatible values for the same edition field are a conflict.
 - The apply operation writes all selected compatible results in one SQLite transaction or writes none.
 - Dismissing a result changes no edition data.
-- Applying a date never creates a new Calendar reminder. If that date already has a reminder enabled, enqueue Calendar synchronization in the same database transaction.
+- Applying a date never creates a calendar file.
 - A job stays `needs_review` until every result is `applied` or `dismissed`.
 
 ### Domain API
@@ -491,24 +477,6 @@ Required behavior:
 - Job runners only append or refresh results through `upsertJobResult`; they never update editions.
 
 ## Job types
-
-### Gmail (M7)
-
-Gmail access is read-only. A Gmail job starts only when the owner submits it. By default it scans changes since the last successful Gmail job, using the history API and persisted `history_id`; the job input may instead specify a later lower bound.
-
-Consider a message only when both conditions hold:
-
-1. The message is newer than the edition's creation time.
-2. The edition status is `submitted` or `waitlisted`.
-
-Classification labels: `approved`, `rejected`, `waitlisted`, `acknowledgement`, `other`.
-
-- The first three create a `decision` result on the Gmail job with a short quote and the Gmail link.
-- Acknowledgement ("we received your application") creates no result.
-- Match order: a known sender domain for that convention, then the convention name or an alias in the subject or body, using the alias function.
-- If several editions could fit, leave `edition_id` unset and require assignment during job review. Do not guess.
-
-Store only the Gmail message ID, thread ID, and a short quote. Do not store the full message or mailbox.
 
 ### Website and pasted text (M8, M9)
 
@@ -571,29 +539,27 @@ Image-only announcements, Facebook, and Instagram are invisible to these job typ
 
 ## Calendar
 
-Each edition can have two opt-in all-day events. Both use `America/Los_Angeles` and have reminders:
+Each edition can produce two optional all-day calendar events, one per date. Both use `America/Los_Angeles`. The `.ics` download includes alarms:
 
 - the day before; and
 - at 09:00 local time on the event date.
 
-| Date | Title | Stored id |
-| --- | --- | --- |
-| `start_date` | `{Convention} {cycle_label} starts` | `start_date_calendar_event_id` |
-| `application_start_date` | `{Convention} {cycle_label} artist alley opens` | `application_start_date_calendar_event_id` |
+| Date | Title |
+| --- | --- |
+| `start_date` | `{Convention} {cycle_label} starts` |
+| `application_start_date` | `{Convention} {cycle_label} artist alley opens` |
 
-### Synchronization rules
+### Download rules
 
-- Saving or applying a date does not create an event.
-- **Add reminder** sets that date's reminder-enabled flag and queues event creation.
-- Editing a reminder-enabled date queues a patch to its existing event.
-- **Remove reminder** clears the enabled flag and queues event deletion.
-- Clearing a reminder-enabled date queues deletion and clears the enabled flag.
-- Dismissing a job result leaves events unchanged.
-- Calendar sync operations retry independently. The UI shows queued or failed synchronization instead of claiming that SQLite and Google changed atomically.
+- Saving or applying a date does not create a file or open Google Calendar.
+- When `application_start_date` or `start_date` is set, that field's label shows two sibling actions: **Download .ics** and **Google Calendar**. There is no separate calendar-file section. The add-edition form has no links until the edition is saved.
+- **Download .ics** is one file per date, not a combined feed. The file is a snapshot; re-download after a date change. Some calendar apps, including Google Calendar, often duplicate on re-import instead of matching `UID`.
+- **Google Calendar** opens Google's event template URL in a new tab (`action=TEMPLATE`). It is not OAuth and cannot set `VALARM`; alarms stay in the `.ics` file.
+- `VALARM` is in the `.ics` file. Apple Calendar usually honors it; Google Calendar import may ignore it.
+- Dismissing a job result leaves downloaded files and template links unchanged.
+- There is no live subscription URL. This app binds to `127.0.0.1`, which Google Calendar's servers cannot fetch.
 
-Scope: `https://www.googleapis.com/auth/calendar.events`. The app only patches event ids it stored.
-
-There are no in-app date notices or alarms. Lineups shows upcoming work; the in-app Calendar tab (M4.5) is a read-only year grid of stored dates; Google Calendar events are the alarms that work when the laptop is shut.
+There are no in-app date notices or alarms. Lineups shows upcoming work; the in-app Calendar tab (M4.5) is a read-only year grid of stored dates; the owner's calendar app owns alerts after they import a `.ics` file or save a Google template.
 
 ## Discovery and drive time
 
@@ -629,18 +595,6 @@ The card shows the estimated hours. The `drive_limit_hours` setting controls the
 
 AnimeCons does not say whether a con has an artist alley. The owner decides by tracking it.
 
-## Google OAuth
-
-Use a personal Google Cloud project with its consent screen in **Testing** and the owner added as a test user. This is sufficient for the restricted `gmail.readonly` scope. Do not publish the app for verification.
-
-- **Client type:** Web.
-- **Redirect URI:** `http://127.0.0.1:4747/api/google/callback`.
-- **Scopes:** `openid`, `email`, `https://www.googleapis.com/auth/gmail.readonly`, and `https://www.googleapis.com/auth/calendar.events`.
-- **First connection:** Set `access_type=offline` and `prompt=consent` so Google returns a refresh token.
-- **Secrets:** Store client ID and client secret in `.env.local`.
-- **Tokens:** Store tokens in `google_credential`.
-- **Disconnected behavior:** Cons, Lineups, Import, website jobs, and pasted-text jobs still work. Settings clearly shows the disconnected state, and Gmail or Calendar actions explain what is unavailable.
-
 ## Module map
 
 Keep these boundaries. A milestone may add files only in the modules it names.
@@ -648,16 +602,14 @@ Keep these boundaries. A milestone may add files only in the modules it names.
 | Module | Responsibility |
 | --- | --- |
 | `src/db` | Drizzle client, migrations, SQLite path `data/vendor.sqlite`, and `pnpm mock:clean` entry point. |
-| `src/domain` | Types, status transitions, Cons/Lineups sorting, Lineups board grouping and drag targets, Calendar schedule markers, `createJobs`, `resolveJobResults`, `upsertJobResult`, edition naming, alias normalization, and mock-data cleanup helpers. No I/O beyond the db passed in. |
+| `src/domain` | Types, status transitions, Cons/Lineups sorting, Lineups board grouping and drag targets, Calendar schedule markers, `.ics` builders, `createJobs`, `resolveJobResults`, `upsertJobResult`, edition naming, alias normalization, and mock-data cleanup helpers. No I/O beyond the db passed in. |
 | `src/import` | Sheet CSV parse, heuristics, review decisions. |
-| `src/google` | OAuth, token refresh, Calendar create/patch/delete, Gmail list/get. |
 | `src/jobs` | Durable queue queries, job claim/finish behavior, and saved source queries. |
-| `src/jobs/gmail.ts` | Manual Gmail scan, decision classification, and matching. |
 | `src/jobs/page.ts` | Manual fetch, hash, snapshots, and rule parsers. |
 | `src/jobs/extract.ts` | `extractApplicationWindow` for website and pasted-text jobs. |
 | `src/jobs/discord.ts` | Manual channel fetch through an invited bot. |
 | `src/discovery` | AnimeCons fetch, name match, drive-time seed. |
-| `src/worker` | Claims queued jobs and Calendar sync operations. No extraction or classification logic of its own. |
+| `src/worker` | Claims queued jobs. No extraction or classification logic of its own. |
 | `src/app` | Routes and UI. Calls domain functions. |
 
 ### UI routes
@@ -672,7 +624,7 @@ Keep these boundaries. A milestone may add files only in the modules it names.
 | `/jobs/[id]` | M6 | Job evidence, result assignment, apply, dismissal, and retry. |
 | `/import` | M3 | Review ambiguous rows and proposed merges. |
 | `/discover` | M11 | Within a day, and Farther. |
-| `/settings` | M5 | Google connection, owner, and drive-limit hours. Sources are edited on the con page. |
+| `/settings` | M5.1 | Drive-limit hours. Sources are edited on the con page. |
 
 The top navigation shows **Cons**, **Lineups**, **Calendar**, **Jobs**, and **Settings** on every primary page. Import is linked as a setup tool rather than a permanent top-level item. Design for desktop first, but keep the Cons grid, Lineups, Calendar, and Jobs usable at narrow widths. Lineups keeps its five columns and scrolls horizontally when the viewport is narrower than the board. There is no separate mobile design.
 
@@ -681,8 +633,7 @@ Empty states use specific, actionable copy:
 - no conventions yet: point to import or add;
 - no active editions in Lineups;
 - no dates for interested conventions on Calendar;
-- no jobs yet, and no jobs in a particular state group;
-- Google not connected; and
+- no jobs yet, and no jobs in a particular state group; and
 - no saved sources on a con or edition.
 
 ## Environment
@@ -690,18 +641,13 @@ Empty states use specific, actionable copy:
 `.env.example` contains:
 
 ```text
-OWNER_EMAIL=
-SESSION_SECRET=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_REDIRECT_URI=http://127.0.0.1:4747/api/google/callback
 LLM_BASE_URL=
 LLM_API_KEY=
 LLM_MODEL=
 DISCORD_BOT_TOKEN=
 ```
 
-`SESSION_SECRET` signs the local session cookie. The app is still usable before any of the optional keys exist.
+The app is still usable before any of the optional keys exist.
 
 ## Milestones
 
@@ -1038,7 +984,29 @@ M1–M3 below are preserved as historical records of what was built, including t
 
 **Out of scope:** Reading Gmail and in-app date notices.
 
-**Completion note — 2026-11-09:** Schema `0006` adds reminder flags, `setting`, `google_credential`, and `calendar_sync`. Settings shows disconnected copy and env setup; `/cons/[id]` has Add/Remove reminder outside Save edition. Outbox coalesces create/patch/delete; worker retries with an injectable fake Calendar client. Browser: `[MOCK] Reminder Con` / `mock-2027` saved dates with no reminder; Add reminder queued (“Connect Google in Settings to sync”); date change kept one create; Remove cancelled it; re-add then clear application start disabled the flag. Settings: Google not connected. Live Google was not connected. Next agent: M6 Jobs only. `OWNER_EMAIL` / Google client keys were unset in this checkout.
+**Completion note — 2026-11-09:** Schema `0006` adds reminder flags, `setting`, `google_credential`, and `calendar_sync`. Settings shows disconnected copy and env setup; `/cons/[id]` has Add/Remove reminder outside Save edition. Outbox coalesces create/patch/delete; worker retries with an injectable fake Calendar client. Browser: `[MOCK] Reminder Con` / `mock-2027` saved dates with no reminder; Add reminder queued (“Connect Google in Settings to sync”); date change kept one create; Remove cancelled it; re-add then clear application start disabled the flag. Settings: Google not connected. Live Google was not connected. Next agent: M5.1 ICS download; no Google Cloud.
+
+### M5.1 — Per-date ICS download
+
+**Deliverables**
+
+- Replace Google Calendar OAuth and reminder sync with a per-date `.ics` download on each edition.
+- Drop reminder-enabled flags, stored Google event ids, `calendar_sync`, and `google_credential`.
+- Remove Google Cloud setup, OAuth, Gmail jobs, and connecting a Google account from the product and this document.
+- Settings keeps drive-limit hours only.
+
+**Acceptance**
+
+- Saving an edition date makes no calendar network call and writes no calendar file.
+- **Download .ics** on application start or event start returns one all-day event with the specified title and both alarms.
+- A missing date has no download.
+- The rest of the app runs with no Google client keys.
+
+**Out of scope:** Combined ICS feeds, live calendar subscriptions, Gmail, and Jobs.
+
+**Completion note — 2026-11-09:** Schema `0007` drops reminder flags, Google event ids, `google_credential`, `calendar_sync`, and Google settings columns. Edition dates get **Download .ics** (all-day LA, day-before and 09:00 `VALARM`). OAuth, Gmail jobs, and Cloud setup are removed from the product and this document. Browser: `[MOCK] ICS Download Con` / `mock-2027` application start 2026-12-10 downloaded `text/calendar` with the mock summary, `DTSTART:20261210`, and two `VALARM`s; event start with no date had no download and the API returned 404. Settings is drive-limit hours only. Next agent: M6 Jobs only.
+
+**Follow-up — 2026-11-09:** Application start / Event start labels carry **Download .ics** and **Google Calendar** (web template URL) when that date is set; the dashed calendar-file section is gone. Browser: `[MOCK] Inline Calendar Con` / `mock-2027` application start 2026-12-10 showed both links beside that label, not in a separate block; ICS stayed `text/calendar`; Google Calendar opened a new tab to `calendar.google.com` TEMPLATE; empty event start had no links. Next agent: M6 Jobs only.
 
 ### M6 — Jobs and review
 
@@ -1049,40 +1017,24 @@ M1–M3 below are preserved as historical records of what was built, including t
 - Add `/jobs` with a multi-job submission form and groups for Queued, Running, Needs review, Done, and Failed. Do not add batch grouping.
 - Add `/jobs/[id]` for evidence, edition assignment, allowed edits, selection, conflict errors, apply, dismissal, and retry.
 - Add developer-only sample runners for opening date, applications open, decision, no-result, and failed jobs. They perform no network access.
-- Apply selected compatible results from one job in one SQLite transaction. Enqueue Calendar synchronization only when an already-enabled reminder date changes.
+- Apply selected compatible results from one job in one SQLite transaction. Applying a date does not create a calendar file.
 - Keep a job in Needs review until every result is applied or dismissed.
 
 **Acceptance**
 
 - One submission creates several independent jobs that appear under their current status rather than a batch.
 - Restarting the worker does not lose queued jobs or duplicate completed sample results.
-- Applying a sample opening date changes the date without enabling a reminder.
+- Applying a sample opening date changes the date without creating a calendar file.
 - Applying open, approved, rejected, and waitlisted samples makes the defined status/date changes.
 - An ambiguous result can be assigned to an edition; dismissal changes no edition data.
 - Conflicting selected results write nothing. Compatible selected results apply together.
 - Unit tests cover every result resolution and job-state transition; browser verification covers submission, status groups, review, apply, dismissal, and retry.
 
-**Out of scope:** Gmail, website, Discord, discovery, or other live network calls.
+**Out of scope:** Website, Discord, discovery, or other live network calls.
 
-### M7 — Gmail job
+### M7 — Gmail job (cancelled)
 
-**Deliverables**
-
-- Add manually initiated Gmail history scans, classification, sender rules, and `decision` job results.
-- Default to changes since the last successful Gmail job and persist the history cursor only after success.
-- Use a small set of bilingual patterns, optionally supplemented by the configured model.
-- Classify "application received" as an acknowledgement, not a decision.
-- Store only message/thread ids, Gmail links, and short evidence quotes.
-
-**Acceptance**
-
-- Fixture messages for approved, rejected, waitlisted, acknowledgement, and other produce the expected job result or silence.
-- An ambiguous sender creates a pending result with no edition.
-- Assigning an edition stores a sender rule; applying remains a separate owner action.
-- Re-running the same fixture history does not duplicate a result.
-- No test calls the live Gmail API.
-
-**Out of scope:** Automatically applying a decision or scheduled Gmail polling.
+Gmail scan jobs are out of scope. The app does not connect to Google Cloud or read a mailbox. Decision mail is pasted in M9.
 
 ### M8 — Website fetch job
 
@@ -1161,8 +1113,8 @@ Given a fixture schedule with Fanime already in the database, a new Bay Area con
 ## Testing
 
 - Domain and job milestones: unit tests for the cases named in the milestone. Run them with `pnpm test`.
-- UI milestones (M2 onward): exercise the named path in a browser on port 4747. Click through Cons/Lineups, import review, Calendar reminder controls, Jobs review, or settings as applicable. Say what you clicked and what you saw in the milestone note.
-- External services stay behind fixtures. Live Google is optional and only when `.env.local` is present.
+- UI milestones (M2 onward): exercise the named path in a browser on port 4747. Click through Cons/Lineups, import review, Calendar `.ics` download, Jobs review, or settings as applicable. Say what you clicked and what you saw in the milestone note.
+- External services stay behind fixtures.
 
 ### Mock data in `data/vendor.sqlite`
 
@@ -1187,5 +1139,5 @@ Columns: 名称, 地点, 开展日期, 申请日期, 申请结果, 状态, 预�
 
 - During the first import pass, do not automatically turn links in 其他连接 into saved sources.
 - The importer may store them as untyped edition links for later promotion.
-- Recognize Discord, Gmail, Google Forms, Eventeny, and EventHub URLs so a later UI can offer **Save as source**.
+- Recognize Discord, Google Forms, Eventeny, and EventHub URLs so a later UI can offer **Save as source**. Gmail URLs stay untyped edition links.
 - Promoting a link to a source belongs to M8 or M10, not M3.
