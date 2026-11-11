@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   clampInterestForColor,
   conventionInterest,
+  interestBackground,
   interestStatusCounts,
   pickAttendanceValue,
   pickRepresentativeEdition,
@@ -95,6 +96,15 @@ describe("representative edition, interest, and cons sorts", () => {
     assert.equal(clampInterestForColor(12), 5);
     assert.equal(clampInterestForColor(-9), -5);
     assert.equal(clampInterestForColor(3), 3);
+    assert.equal(interestBackground(0), "var(--card)");
+    assert.equal(
+      interestBackground(5),
+      "color-mix(in oklch, var(--card) 0%, var(--interest-positive))",
+    );
+    assert.equal(
+      interestBackground(-5),
+      "color-mix(in oklch, var(--card) 0%, var(--interest-negative))",
+    );
   });
 
   it("groups scoring statuses in vocabulary order and omits zeros", () => {

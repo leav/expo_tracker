@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ThemeToggle } from "../components/theme-toggle";
 
 const primary = [
   { href: "/", label: "Expos" },
@@ -15,16 +16,19 @@ export function AppNav() {
         <Link href="/" className="font-medium tracking-tight">
           Expo Tracker
         </Link>
-        <nav className="flex flex-wrap gap-4 text-sm">
-          {primary.map((item) => (
-            <Link key={item.href} className="underline-offset-4 hover:underline" href={item.href}>
-              {item.label}
+        <div className="flex flex-wrap items-center gap-4">
+          <nav className="flex flex-wrap gap-4 text-sm">
+            {primary.map((item) => (
+              <Link key={item.href} className="underline-offset-4 hover:underline" href={item.href}>
+                {item.label}
+              </Link>
+            ))}
+            <Link className="text-muted-foreground underline-offset-4 hover:underline" href="/import">
+              Import
             </Link>
-          ))}
-          <Link className="text-muted-foreground underline-offset-4 hover:underline" href="/import">
-            Import
-          </Link>
-        </nav>
+          </nav>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

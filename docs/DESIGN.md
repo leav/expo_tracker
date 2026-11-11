@@ -626,7 +626,7 @@ Keep these boundaries. A milestone may add files only in the modules it names.
 | `/discover` | M11 | Within a day, and Farther. |
 | `/settings` | M5.1 | Drive-limit hours. Sources are edited on the con page. |
 
-The top navigation shows **Cons**, **Lineups**, **Calendar**, **Jobs**, and **Settings** on every primary page. Import is linked as a setup tool rather than a permanent top-level item. Design for desktop first, but keep the Cons grid, Lineups, Calendar, and Jobs usable at narrow widths. Lineups keeps its five columns and scrolls horizontally when the viewport is narrower than the board. There is no separate mobile design.
+The top navigation shows **Cons**, **Lineups**, **Calendar**, **Jobs**, and **Settings** on every primary page. Import is linked as a setup tool rather than a permanent top-level item. The header also has a System / Light / Dark appearance control; the choice is stored in the browser and is not a Settings field. Design for desktop first, but keep the Cons grid, Lineups, Calendar, and Jobs usable at narrow widths. Lineups keeps its five columns and scrolls horizontally when the viewport is narrower than the board. There is no separate mobile design.
 
 Empty states use specific, actionable copy:
 

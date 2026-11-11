@@ -9,7 +9,7 @@
     "worker": "tsx src/worker/index.ts",
     "mock:clean": "tsx src/db/clean-mock.ts",
     "lint": "eslint",
-    "test": "tsx --test src/domain/*.test.ts src/import/*.test.ts"
+    "test": "tsx --test src/domain/*.test.ts src/import/*.test.ts src/lib/*.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

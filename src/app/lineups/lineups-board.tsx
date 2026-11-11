@@ -412,7 +412,7 @@ function TerminalDrop({ status }: { status: "attended" | "withdrawn" }) {
       className={cn(
         "flex min-h-24 items-center justify-center rounded-xl border-2 border-dashed text-lg font-medium",
         attended
-          ? "border-emerald-700/40 bg-emerald-50 text-emerald-950"
+          ? "border-emerald-700/40 bg-emerald-50 text-emerald-950 dark:border-emerald-400/40 dark:bg-emerald-950 dark:text-emerald-100"
           : "border-destructive/40 bg-destructive/10 text-destructive",
         isOver ? "ring-2 ring-foreground" : "",
       )}

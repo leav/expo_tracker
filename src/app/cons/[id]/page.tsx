@@ -120,7 +120,6 @@ export default async function ConsDetailPage({
               type="submit"
               size="icon"
               variant="destructive"
-              className="bg-destructive text-white hover:bg-destructive/90"
               aria-label="Delete convention"
             >
               <Trash2 />
@@ -250,7 +249,6 @@ function EditionForm({
             type="submit"
             size="icon"
             variant="destructive"
-            className="bg-destructive text-white hover:bg-destructive/90"
             aria-label="Delete edition"
           >
             <Trash2 />

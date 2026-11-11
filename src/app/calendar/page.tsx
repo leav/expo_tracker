@@ -22,9 +22,9 @@ const weekdayLabels = ["S", "M", "T", "W", "T", "F", "S"] as const;
 
 function chipClass(kind: ScheduleKind): string {
   if (kind === "application_start") {
-    return "border-amber-300 bg-amber-100 text-amber-950 hover:border-amber-500";
+    return "border-amber-300 bg-amber-100 text-amber-950 hover:border-amber-500 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100 dark:hover:border-amber-400";
   }
-  return "border-emerald-300 bg-emerald-100 text-emerald-950 hover:border-emerald-500";
+  return "border-emerald-300 bg-emerald-100 text-emerald-950 hover:border-emerald-500 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100 dark:hover:border-emerald-400";
 }
 
 function navButtonClass(disabled: boolean): string {

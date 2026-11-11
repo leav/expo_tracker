@@ -121,10 +121,10 @@ export function interestBackground(score: number): string {
   if (clamped === 0) return "var(--card)";
   if (clamped > 0) {
     const t = clamped / 5;
-    return `color-mix(in oklch, var(--card) ${Math.round((1 - t) * 72)}%, oklch(0.86 0.14 145))`;
+    return `color-mix(in oklch, var(--card) ${Math.round((1 - t) * 72)}%, var(--interest-positive))`;
   }
   const t = -clamped / 5;
-  return `color-mix(in oklch, var(--card) ${Math.round((1 - t) * 72)}%, oklch(0.86 0.14 25))`;
+  return `color-mix(in oklch, var(--card) ${Math.round((1 - t) * 72)}%, var(--interest-negative))`;
 }
 
 export function startMonth(startDate: string | null): number | null {
