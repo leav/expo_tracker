@@ -13,6 +13,7 @@ import {
   type ScheduleKind,
   type ScheduleMarker,
 } from "../../domain/schedule";
+import { InterestGauge } from "../../components/interest-gauge";
 import { todayInLosAngeles } from "../../domain/status";
 import { openDatabase } from "../../db";
 
@@ -197,6 +198,7 @@ function MonthCard({
                       <span className="block truncate font-medium">
                         {marker.conventionName} {marker.cycleLabel}
                       </span>
+                      <InterestGauge gauge={marker.gauge} compact />
                       <span className="block truncate">{marker.kindLabel}</span>
                     </Link>
                   );

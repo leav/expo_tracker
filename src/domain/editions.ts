@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { aliases, conventions, editions } from "../db/schema";
-import { conventionInterest } from "./cons";
+import { interestGauge } from "./cons";
 import { compareCycleLabels } from "./cycles";
 import type { DomainResult, TrackerDb } from "./db";
 import { blankToNull, isError, parseDate } from "./fields";
@@ -186,7 +186,7 @@ export function getSeries(db: TrackerDb, conventionId: number) {
     convention,
     aliases: aliasRows,
     editions: editionRows,
-    interest: conventionInterest(convention.manualInterest, editionRows),
+    gauge: interestGauge(convention.manualInterest, editionRows),
   };
 }
 

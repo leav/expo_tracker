@@ -4,7 +4,7 @@ import { compareCycleLabels } from "./cycles";
 import type { TrackerDb } from "./db";
 import { seedDriveMinutes } from "./driveTime";
 import { locationLabel } from "./location";
-import { editionInterest, isStatus, statusLabels, statuses, type Status } from "./status";
+import { editionInterest, isStatus, statusLabels, type Status } from "./status";
 
 export { locationLabel };
 
@@ -18,6 +18,73 @@ export type RepresentativeEdition = {
   status: Status;
 };
 
+export const gaugeKindOrder = [
+  "manual",
+  "unknown",
+  "waiting_to_apply",
+  "open",
+  "submitted",
+  "waitlisted",
+  "approved",
+  "attended",
+  "withdrawn",
+  "rejected",
+  "skipped",
+] as const;
+
+export type GaugeKind = (typeof gaugeKindOrder)[number];
+
+export type GaugeColor =
+  | "manual"
+  | "unknown"
+  | "waiting"
+  | "approved"
+  | "done"
+  | "closed"
+  | "skipped";
+
+export type GaugeSegment = {
+  kind: GaugeKind;
+  count: number;
+  filled: boolean;
+  color: GaugeColor;
+  label: string;
+};
+
+export type GaugeTick = {
+  kind: GaugeKind;
+  filled: boolean;
+  color: GaugeColor;
+};
+
+export type InterestGauge = {
+  segments: GaugeSegment[];
+  ticks: GaugeTick[];
+  summary: string;
+  count: number;
+};
+
+export const emptyInterestGauge: InterestGauge = {
+  segments: [],
+  ticks: [],
+  summary: "",
+  count: 0,
+};
+
+const gaugeLabels: Record<GaugeKind, string> = {
+  manual: "interest",
+  unknown: "unknown",
+  waiting_to_apply: "waiting",
+  open: "ready",
+  submitted: "submitted",
+  waitlisted: "waitlisted",
+  approved: "approved",
+  attended: "attended",
+  withdrawn: "withdrawn",
+  rejected: "rejected",
+  skipped: "skipped",
+};
+
 export type ConsTile = {
   conventionId: number;
   displayName: string;
@@ -28,8 +95,7 @@ export type ConsTile = {
   city: string | null;
   region: string | null;
   locationLabel: string | null;
-  interest: number;
-  colorScore: number;
+  gauge: InterestGauge;
   driveMinutes: number | null;
   startMonth: number | null;
   hasEditions: boolean;
@@ -85,46 +151,77 @@ export function conventionInterest(
   return manualInterest + editionRows.reduce((sum, row) => sum + editionInterest(row.status), 0);
 }
 
-export type InterestStatusCount = {
-  status: Status;
-  count: number;
-  contribution: 1 | -1;
-  label: string;
-};
+function gaugeColor(kind: GaugeKind): GaugeColor {
+  switch (kind) {
+    case "manual":
+      return "manual";
+    case "unknown":
+      return "unknown";
+    case "waiting_to_apply":
+    case "open":
+    case "submitted":
+    case "waitlisted":
+      return "waiting";
+    case "approved":
+      return "approved";
+    case "attended":
+    case "withdrawn":
+      return "done";
+    case "rejected":
+      return "closed";
+    case "skipped":
+      return "skipped";
+  }
+}
 
-export function interestStatusCounts(editionRows: { status: string }[]): InterestStatusCount[] {
-  const counts = new Map<Status, number>();
+function gaugeFilled(kind: GaugeKind): boolean {
+  return kind !== "unknown";
+}
+
+function buildInterestGauge(counts: Map<GaugeKind, number>): InterestGauge {
+  const segments: GaugeSegment[] = [];
+  const ticks: GaugeTick[] = [];
+  for (const kind of gaugeKindOrder) {
+    const count = counts.get(kind) ?? 0;
+    if (count <= 0) continue;
+    const filled = gaugeFilled(kind);
+    const color = gaugeColor(kind);
+    segments.push({ kind, count, filled, color, label: gaugeLabels[kind] });
+    for (let index = 0; index < count; index++) {
+      ticks.push({ kind, filled, color });
+    }
+  }
+  if (ticks.length === 0) return emptyInterestGauge;
+  return {
+    segments,
+    ticks,
+    summary: segments.map((segment) => `${segment.count} ${segment.label}`).join(", "),
+    count: ticks.length,
+  };
+}
+
+export function interestGauge(
+  manualInterest: number,
+  editionRows: { status: string }[],
+): InterestGauge {
+  const counts = new Map<GaugeKind, number>();
+  const manualTicks = Math.max(0, Math.trunc(manualInterest));
+  if (manualTicks > 0) counts.set("manual", manualTicks);
   for (const row of editionRows) {
-    if (!isStatus(row.status) || editionInterest(row.status) === 0) continue;
+    if (!isStatus(row.status)) continue;
     counts.set(row.status, (counts.get(row.status) ?? 0) + 1);
   }
-  return statuses
-    .filter((status) => (counts.get(status) ?? 0) > 0)
-    .map((status) => {
-      const count = counts.get(status)!;
-      const contribution = editionInterest(status) as 1 | -1;
-      return {
-        status,
-        count,
-        contribution,
-        label: statusLabels[status].toLowerCase(),
-      };
-    });
+  return buildInterestGauge(counts);
 }
 
-export function clampInterestForColor(score: number): number {
-  return Math.min(5, Math.max(-5, score));
-}
-
-export function interestBackground(score: number): string {
-  const clamped = clampInterestForColor(score);
-  if (clamped === 0) return "var(--card)";
-  if (clamped > 0) {
-    const t = clamped / 5;
-    return `color-mix(in oklch, var(--card) ${Math.round((1 - t) * 72)}%, var(--interest-positive))`;
+export function shiftInterestGauge(gauge: InterestGauge, from: Status, to: Status): InterestGauge {
+  const counts = new Map<GaugeKind, number>();
+  for (const segment of gauge.segments) {
+    counts.set(segment.kind, segment.count);
   }
-  const t = -clamped / 5;
-  return `color-mix(in oklch, var(--card) ${Math.round((1 - t) * 72)}%, var(--interest-negative))`;
+  counts.set(from, (counts.get(from) ?? 0) - 1);
+  counts.set(to, (counts.get(to) ?? 0) + 1);
+  return buildInterestGauge(counts);
 }
 
 export function startMonth(startDate: string | null): number | null {
@@ -138,7 +235,7 @@ export function sortCons(tiles: ConsTile[], key: ConsSortKey): ConsTile[] {
   const sorted = [...tiles];
   sorted.sort((a, b) => {
     if (key === "interest") {
-      return b.interest - a.interest || name(a, b);
+      return b.gauge.count - a.gauge.count || name(a, b);
     }
     if (key === "distance") {
       if (a.driveMinutes == null && b.driveMinutes == null) return name(a, b);
@@ -173,7 +270,6 @@ export function listCons(db: TrackerDb, sort: ConsSortKey, today: string): ConsT
     const status = representative && isStatus(representative.status) ? representative.status : null;
     const city = convention.defaultCity;
     const region = convention.defaultRegion;
-    const interest = conventionInterest(convention.manualInterest, ownEditions);
     return {
       conventionId: convention.id,
       displayName: convention.displayName,
@@ -184,8 +280,7 @@ export function listCons(db: TrackerDb, sort: ConsSortKey, today: string): ConsT
       city,
       region,
       locationLabel: locationLabel(city, region),
-      interest,
-      colorScore: clampInterestForColor(interest),
+      gauge: interestGauge(convention.manualInterest, ownEditions),
       driveMinutes: convention.driveMinutes ?? seedDriveMinutes(city),
       startMonth: startMonth(representative?.startDate ?? null),
       hasEditions: ownEditions.length > 0,

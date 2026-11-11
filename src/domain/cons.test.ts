@@ -1,15 +1,20 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  clampInterestForColor,
   conventionInterest,
-  interestBackground,
-  interestStatusCounts,
+  emptyInterestGauge,
+  interestGauge,
   pickAttendanceValue,
   pickRepresentativeEdition,
+  shiftInterestGauge,
   sortCons,
   type ConsTile,
+  type InterestGauge,
 } from "./cons";
+
+function gaugeWithCount(count: number): InterestGauge {
+  return { ...emptyInterestGauge, count };
+}
 
 function tile(overrides: Partial<ConsTile> & Pick<ConsTile, "conventionId" | "displayName">): ConsTile {
   return {
@@ -20,8 +25,7 @@ function tile(overrides: Partial<ConsTile> & Pick<ConsTile, "conventionId" | "di
     city: null,
     region: null,
     locationLabel: null,
-    interest: 0,
-    colorScore: 0,
+    gauge: emptyInterestGauge,
     driveMinutes: null,
     startMonth: null,
     hasEditions: true,
@@ -69,7 +73,7 @@ describe("representative edition, interest, and cons sorts", () => {
     assert.equal(pickAttendanceValue(rows, "2026-11-05"), 27500);
   });
 
-  it("sums status-weighted edition interest plus signed manual interest and clamps color", () => {
+  it("sums status-weighted edition interest plus signed manual interest", () => {
     assert.equal(
       conventionInterest(0, [
         { status: "waiting_to_apply" },
@@ -93,46 +97,59 @@ describe("representative edition, interest, and cons sorts", () => {
       ]),
       -1,
     );
-    assert.equal(clampInterestForColor(12), 5);
-    assert.equal(clampInterestForColor(-9), -5);
-    assert.equal(clampInterestForColor(3), 3);
-    assert.equal(interestBackground(0), "var(--card)");
-    assert.equal(
-      interestBackground(5),
-      "color-mix(in oklch, var(--card) 0%, var(--interest-positive))",
-    );
-    assert.equal(
-      interestBackground(-5),
-      "color-mix(in oklch, var(--card) 0%, var(--interest-negative))",
-    );
   });
 
-  it("groups scoring statuses in vocabulary order and omits zeros", () => {
+  it("builds gauge ticks by status family, including hollow unknown and pink manual ticks", () => {
+    const gauge = interestGauge(3, [
+      { status: "skipped" },
+      { status: "attended" },
+      { status: "unknown" },
+      { status: "submitted" },
+      { status: "attended" },
+      { status: "withdrawn" },
+      { status: "open" },
+      { status: "rejected" },
+    ]);
+    assert.equal(gauge.count, 11);
+    assert.equal(
+      gauge.summary,
+      "3 interest, 1 unknown, 1 ready, 1 submitted, 2 attended, 1 withdrawn, 1 rejected, 1 skipped",
+    );
     assert.deepEqual(
-      interestStatusCounts([
-        { status: "skipped" },
-        { status: "attended" },
-        { status: "unknown" },
-        { status: "submitted" },
-        { status: "attended" },
-        { status: "withdrawn" },
-        { status: "open" },
-      ]),
+      gauge.segments.map((segment) => ({ kind: segment.kind, color: segment.color, filled: segment.filled })),
       [
-        { status: "open", count: 1, contribution: 1, label: "ready to apply" },
-        { status: "submitted", count: 1, contribution: 1, label: "submitted" },
-        { status: "attended", count: 2, contribution: 1, label: "attended" },
-        { status: "skipped", count: 1, contribution: -1, label: "skipped" },
+        { kind: "manual", color: "manual", filled: true },
+        { kind: "unknown", color: "unknown", filled: false },
+        { kind: "open", color: "waiting", filled: true },
+        { kind: "submitted", color: "waiting", filled: true },
+        { kind: "attended", color: "done", filled: true },
+        { kind: "withdrawn", color: "done", filled: true },
+        { kind: "rejected", color: "closed", filled: true },
+        { kind: "skipped", color: "skipped", filled: true },
       ],
     );
-    assert.deepEqual(interestStatusCounts([{ status: "unknown" }, { status: "withdrawn" }]), []);
   });
 
-  it("sorts by interest, distance, month, and name with name as the tie-break", () => {
+  it("omits negative manual ticks and empty gauges", () => {
+    assert.deepEqual(interestGauge(0, []), emptyInterestGauge);
+    assert.deepEqual(interestGauge(-2, []), emptyInterestGauge);
+    const unknownOnly = interestGauge(-4, [{ status: "unknown" }, { status: "unknown" }]);
+    assert.equal(unknownOnly.count, 2);
+    assert.equal(unknownOnly.summary, "2 unknown");
+    assert.equal(unknownOnly.ticks.every((tick) => !tick.filled), true);
+  });
+
+  it("shifts a tick from one status to another for optimistic lineup moves", () => {
+    const gauge = interestGauge(0, [{ status: "approved" }, { status: "submitted" }]);
+    assert.equal(shiftInterestGauge(gauge, "approved", "waiting_to_apply").summary, "1 waiting, 1 submitted");
+    assert.equal(shiftInterestGauge(gauge, "approved", "attended").summary, "1 submitted, 1 attended");
+  });
+
+  it("sorts by gauge count, distance, month, and name with name as the tie-break", () => {
     const tiles = [
-      tile({ conventionId: 1, displayName: "Beta", interest: 2, driveMinutes: 400, startMonth: 5 }),
-      tile({ conventionId: 2, displayName: "Alpha", interest: 2, driveMinutes: null, startMonth: null }),
-      tile({ conventionId: 3, displayName: "Gamma", interest: 5, driveMinutes: 60, startMonth: 1 }),
+      tile({ conventionId: 1, displayName: "Beta", gauge: gaugeWithCount(2), driveMinutes: 400, startMonth: 5 }),
+      tile({ conventionId: 2, displayName: "Alpha", gauge: gaugeWithCount(2), driveMinutes: null, startMonth: null }),
+      tile({ conventionId: 3, displayName: "Gamma", gauge: gaugeWithCount(5), driveMinutes: 60, startMonth: 1 }),
     ];
     assert.deepEqual(
       sortCons(tiles, "interest").map((row) => row.displayName),

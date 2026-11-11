@@ -1,3 +1,4 @@
+import { shiftInterestGauge, type InterestGauge } from "./cons";
 import { compareCycleLabels } from "./cycles";
 import { locationLabel } from "./location";
 import { isLineupStatus, lineupStatuses, statusLabels, type LineupStatus, type Status } from "./status";
@@ -23,7 +24,7 @@ export type LineupSource = {
   startDate: string | null;
   city: string | null;
   region: string | null;
-  interest: number;
+  gauge: InterestGauge;
 };
 
 export type LineupItem = {
@@ -46,7 +47,7 @@ export type LineupItem = {
   city: string | null;
   region: string | null;
   locationLabel: string | null;
-  interest: number;
+  gauge: InterestGauge;
 };
 
 export type LineupColumn = {
@@ -169,7 +170,7 @@ export function presentLineupItem(source: LineupSource, today: string): LineupIt
     city: source.city,
     region: source.region,
     locationLabel: locationLabel(source.city, source.region),
-    interest: source.interest,
+    gauge: source.gauge,
   };
 }
 
@@ -202,11 +203,14 @@ export function applyLineupMove(board: LineupBoard, editionId: number, toStatus:
   const items = board.columns.flatMap((column) => column.items);
   const current = items.find((item) => item.editionId === editionId);
   if (!current || !canMoveLineupStatus(current.status, toStatus)) return board;
-  const remaining = items.filter((item) => item.editionId !== editionId);
+  const gauge = shiftInterestGauge(current.gauge, current.status, toStatus);
+  const remaining = items
+    .filter((item) => item.editionId !== editionId)
+    .map((item) => (item.conventionId === current.conventionId ? { ...item, gauge } : item));
   if (!isLineupStatus(toStatus)) {
     return { columns: groupLineups(remaining), total: remaining.length };
   }
-  const next = presentLineupItem({ ...current, status: toStatus }, today);
+  const next = presentLineupItem({ ...current, status: toStatus, gauge }, today);
   if (!next) return board;
   const nextItems = [...remaining, next];
   return { columns: groupLineups(nextItems), total: nextItems.length };

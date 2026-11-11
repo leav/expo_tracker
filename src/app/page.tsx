@@ -2,8 +2,9 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { createConventionAction } from "./actions";
 import { ConventionTitle } from "../components/convention-title";
+import { InterestGauge } from "../components/interest-gauge";
 import { Button } from "../components/ui/button";
-import { interestBackground, listCons, parseConsSort, type ConsSortKey } from "../domain/cons";
+import { listCons, parseConsSort, type ConsSortKey } from "../domain/cons";
 import { countConventions } from "../domain/conventions";
 import { todayInLosAngeles } from "../domain/status";
 import { openDatabase } from "../db";
@@ -81,13 +82,12 @@ export default async function Home({
             tile.eventDate ?? "no event date",
             tile.statusLabel ?? (tile.hasEditions ? "unknown status" : "no editions"),
             tile.locationLabel ?? "no city",
-            `interest ${tile.interest}`,
+            tile.gauge.summary || "no gauge",
           ].join(", ");
           return (
             <article
               key={tile.conventionId}
-              className="flex flex-col gap-1 rounded-lg border p-3 hover:border-foreground/40"
-              style={{ backgroundColor: interestBackground(tile.interest) }}
+              className="flex flex-col gap-1 rounded-lg border bg-card p-3 hover:border-foreground/40"
             >
               <ConventionTitle
                 name={tile.displayName}
@@ -95,6 +95,7 @@ export default async function Home({
                 fallbackHref={detailHref}
               />
               <Link href={detailHref} aria-label={summary} className="grid gap-1">
+                <InterestGauge gauge={tile.gauge} />
                 <span className="text-sm text-muted-foreground">{tile.eventDate ?? "No event date"}</span>
                 <span className="text-sm">{tile.hasEditions ? tile.statusLabel ?? "Unknown" : "No editions"}</span>
                 <span className="text-sm text-muted-foreground">{tile.locationLabel ?? "City unknown"}</span>

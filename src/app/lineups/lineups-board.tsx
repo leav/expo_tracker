@@ -25,7 +25,7 @@ import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { moveLineupEditionAction } from "../actions";
 import { ConventionTitle } from "../../components/convention-title";
-import { InterestHearts } from "../../components/interest-hearts";
+import { InterestGauge } from "../../components/interest-gauge";
 import {
   applyLineupMove,
   canMoveLineupStatus,
@@ -93,7 +93,7 @@ function boardFingerprint(board: LineupBoard): string {
             item.dateLabel,
             item.relativeLabel ?? "",
             item.locationLabel ?? "",
-            item.interest,
+            item.gauge.summary,
             item.website ?? "",
           ].join("\u001f"),
       ),
@@ -379,7 +379,7 @@ function LineupCardFace({
         </Link>
       </ConventionTitle>
       <Link href={detailHref} className="grid gap-1">
-        <InterestHearts score={item.interest} />
+        <InterestGauge gauge={item.gauge} />
         <span
           className={
             item.actionDate == null

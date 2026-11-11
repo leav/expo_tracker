@@ -12,10 +12,9 @@ import {
 import { ConfirmForm } from "../../../components/confirm-form";
 import { ConventionTitle } from "../../../components/convention-title";
 import { EditionDateFields, type CalendarHrefs } from "../../../components/edition-date-fields";
-import { InterestHearts } from "../../../components/interest-hearts";
+import { InterestGauge } from "../../../components/interest-gauge";
 import { Button } from "../../../components/ui/button";
 import { calendarEventTitle, type ReminderKind } from "../../../domain/calendarEvent";
-import { interestStatusCounts } from "../../../domain/cons";
 import { getSeries } from "../../../domain/editions";
 import { hrefForGoogleCalendarTemplate } from "../../../domain/ics";
 import { isPaidStatus, isStatus, statusLabels, statuses } from "../../../domain/status";
@@ -39,16 +38,14 @@ export default async function ConsDetailPage({
   const series = getSeries(db, conventionId);
   if (!series) notFound();
   const convention = series.convention;
-  const statusCounts = interestStatusCounts(series.editions);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
       <header className="grid gap-2">
         <ConventionTitle as="h1" name={convention.displayName} website={convention.website} />
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-          <span>Interest Score</span>
-          <InterestHearts score={series.interest} />
-          <span>=</span>
+        <InterestGauge gauge={series.gauge} showSummary />
+        <label className="flex flex-wrap items-center gap-2 text-sm">
+          Manual interest
           <input
             form={`save-convention-${convention.id}`}
             name="manualInterest"
@@ -58,12 +55,7 @@ export default async function ConsDetailPage({
             aria-label="Manual interest"
             className="h-9 w-16 rounded-md border border-input bg-background px-2 text-center"
           />
-          {statusCounts.map((item) => (
-            <span key={item.status}>
-              {item.contribution > 0 ? "+" : "-"} {item.count} {item.label}
-            </span>
-          ))}
-        </div>
+        </label>
       </header>
       {query.error ? (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">{query.error}</p>

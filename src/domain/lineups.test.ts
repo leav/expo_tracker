@@ -9,6 +9,7 @@ import { editions } from "../db/schema";
 import { createConvention } from "./conventions";
 import type { TrackerDb } from "./db";
 import { createEdition } from "./editions";
+import { interestGauge } from "./cons";
 import {
   addCalendarDays,
   applyLineupMove,
@@ -40,7 +41,7 @@ function source(overrides: Partial<LineupSource> & Pick<LineupSource, "editionId
     startDate: null,
     city: null,
     region: null,
-    interest: 1,
+    gauge: interestGauge(0, [{ status: overrides.status }]),
     ...overrides,
   };
 }
@@ -277,6 +278,7 @@ describe("lineups dates and grouping", () => {
     };
     const waiting = applyLineupMove(board, 1, "waiting_to_apply", today);
     assert.equal(waiting.columns[0]?.items[0]?.dateLabel, "Applications open 11/08");
+    assert.equal(waiting.columns[0]?.items[0]?.gauge.summary, "1 waiting");
     assert.equal(waiting.columns[4]?.items.length, 0);
     const attended = applyLineupMove(board, 1, "attended", today);
     assert.equal(attended.total, 0);
@@ -341,7 +343,7 @@ describe("lineup writes", () => {
     assert.equal(openItem?.city, "Oakland");
     assert.equal(openItem?.region, "CA");
     assert.equal(openItem?.locationLabel, "Oakland, CA");
-    assert.equal(openItem?.interest, 1);
+    assert.equal(openItem?.gauge.summary, "1 ready");
 
     const rejected = moveLineupEdition(db, created.value.id, "withdrawn", today);
     assert.equal(rejected.ok, false);

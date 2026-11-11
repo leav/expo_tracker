@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { conventions, editions } from "../db/schema";
-import { conventionInterest } from "./cons";
+import { interestGauge } from "./cons";
 import type { DomainResult, TrackerDb } from "./db";
 import {
   canMoveLineupStatus,
@@ -62,7 +62,7 @@ export function listLineups(db: TrackerDb, today: string): LineupBoard {
         startDate: row.startDate,
         city: convention.defaultCity,
         region: convention.defaultRegion,
-        interest: conventionInterest(convention.manualInterest, editionsByConvention.get(row.conventionId) ?? []),
+        gauge: interestGauge(convention.manualInterest, editionsByConvention.get(row.conventionId) ?? []),
       },
       today,
     );

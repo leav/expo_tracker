@@ -64,7 +64,7 @@ flowchart LR
 | `src/domain` | Pure domain logic: conventions, editions, aliases, name normalization, status rules, Expos sorting, Lineups board & drag rules, Calendar markers, `.ics` and Google Calendar builders, drive-time seeds, settings, and mock cleanup. |
 | `src/import` | `摆摊` CSV loader/parser, status and date heuristics, and review queue actions for merges, aliases, and unresolved rows. |
 | `src/worker` | Singleton background loop stub (`src/worker/loop.ts`) started by `src/instrumentation.ts` or `pnpm worker`. |
-| `src/components` | Shared UI components (`convention-title.tsx`, `edition-date-fields.tsx`, `interest-hearts.tsx`, `confirm-form.tsx`, `theme-toggle.tsx`, `theme-script.tsx`). |
+| `src/components` | Shared UI components (`convention-title.tsx`, `edition-date-fields.tsx`, `interest-gauge.tsx`, `confirm-form.tsx`, `theme-toggle.tsx`, `theme-script.tsx`). |
 | `src/lib` | Theme preference resolution (`src/lib/theme.ts`) and class utilities. |
 | `src/app` | Next.js App Router pages, server actions (`src/app/actions.ts`), and `.ics` download route (`src/app/api/ics/[editionId]/route.ts`). |
 
@@ -143,26 +143,27 @@ Identity rules:
 
 Each edition has a single lifecycle status:
 
-| Status | UI Label | Lineups Action Date | Interest Score |
-| --- | --- | --- | --- |
-| `unknown` | Unknown | Excluded | `0` |
-| `waiting_to_apply` | Waiting to apply | `application_start_date` (`Date not set` sorts first) | `+1` |
-| `open` | Ready to apply | `application_end_date`, or `application_start_date + 7 days` labeled `Estimated close` | `+1` |
-| `submitted` | Submitted | `result_date` (`Date not set` sorts first) | `+1` |
-| `waitlisted` | Waitlisted | `start_date` (`Date not set` sorts first) | `+1` |
-| `approved` | Approved | `start_date` (`Date not set` sorts first) | `+1` |
-| `attended` | Attended | Excluded (drop target when dragging `approved` on Lineups) | `+1` |
-| `rejected` | Rejected | Excluded | `+1` |
-| `withdrawn` | Withdrawn | Excluded (drop target when dragging `approved` on Lineups) | `0` |
-| `skipped` | Skipped | Excluded | `-1` |
+| Status | UI Label | Lineups Action Date | Interest Score | Gauge |
+| --- | --- | --- | --- | --- |
+| `unknown` | Unknown | Excluded | `0` | Hollow |
+| `waiting_to_apply` | Waiting to apply | `application_start_date` (`Date not set` sorts first) | `+1` | Yellow |
+| `open` | Ready to apply | `application_end_date`, or `application_start_date + 7 days` labeled `Estimated close` | `+1` | Yellow |
+| `submitted` | Submitted | `result_date` (`Date not set` sorts first) | `+1` | Yellow |
+| `waitlisted` | Waitlisted | `start_date` (`Date not set` sorts first) | `+1` | Yellow |
+| `approved` | Approved | `start_date` (`Date not set` sorts first) | `+1` | Green |
+| `attended` | Attended | Excluded (drop target when dragging `approved` on Lineups) | `+1` | Blue |
+| `rejected` | Rejected | Excluded | `+1` | Scarlet |
+| `withdrawn` | Withdrawn | Excluded (drop target when dragging `approved` on Lineups) | `0` | Blue |
+| `skipped` | Skipped | Excluded | `-1` | Gray |
 
 When creating a new edition with status `unknown`, if `application_start_date` is in the future relative to today in `America/Los_Angeles`, status initializes to `waiting_to_apply`.
 
 ### Interest Calculation (`src/domain/cons.ts`)
 
-- **Total interest:** `conventionInterest = manual_interest + sum(editionInterest(edition.status))`.
-- **Expos grid cue:** Clamped to `-5…+5` solely to mix the card background color between `--interest-negative` (red), `--card` (neutral at `0`), and `--interest-positive` (green). The unclamped score is exposed in the tile's `aria-label`.
-- **Detail & Lineups display:** Shown unclamped as hearts (`❤️` per positive point, `💔` per negative point, omitted at `0`). The convention detail header renders the full equation: `Interest Score ❤️❤️❤️ = [2] + 1 submitted`.
+- **Total interest (calendar filter):** `conventionInterest = manual_interest + sum(editionInterest(edition.status))`. Calendar includes a convention when this value is greater than `0`.
+- **Gauge:** One CSS tick per edition, plus one light-pink tick per positive `manual_interest`. Negative manual interest does not render ticks. Ticks are grouped left to right: manual (light pink), unknown (hollow), waiting/ready/submitted/waitlisted (yellow), approved (green), attended/withdrawn (blue), rejected (scarlet), skipped (gray). Hover and `aria-label` use a zero-omitting summary such as `3 interest, 1 submitted, 2 attended`. An empty gauge renders nothing.
+- **Expos Interest sort:** Gauge tick count descending (editions + positive manual ticks, including hollow unknown), then `display_name`. Expos cards use a neutral `--card` background with no interest tint or score number.
+- **Display:** The gauge sits under the convention name on Expos, Lineups (convention-level), Calendar chips (compact), and `/cons/[id]`. Detail shows the summary in plain text and keeps the manual-interest field.
 
 ### Date Auto-fill & Status Transitions (`src/domain/editionDates.ts`, `src/domain/statusDates.ts`)
 
@@ -213,7 +214,7 @@ Top navigation links **Expos**, **Lineups**, **Calendar**, **Jobs**, **Settings*
 | Route | Purpose |
 | --- | --- |
 | `/` | **Expos grid:** Compact catalog of conventions with add-convention form and four sort modes. |
-| `/cons/[id]` | **Convention detail:** Interest equation, convention metadata & delete, aliases, and editions ordered by `cycle_label`. (`/series/[id]` redirects here.) |
+| `/cons/[id]` | **Convention detail:** Interest gauge, manual interest, convention metadata & delete, aliases, and editions ordered by `cycle_label`. (`/series/[id]` redirects here.) |
 | `/lineups` | **Lineups board:** Five-column drag-and-drop status board ordered by each column's action date. |
 | `/calendar` | **Calendar grid:** Read-only 12-month year view of application opens and event starts for interested conventions. |
 | `/api/ics/[editionId]` | **ICS download:** Returns a single-event `text/calendar` file for `kind=application_start` or `kind=start`. |
@@ -231,7 +232,7 @@ Each tile summarizes one representative edition for its convention:
 
 Equal-date ties break by `cycle_label`. Sorts (with `display_name` ascending as final tie-breaker):
 
-- **Interest (`interest`):** `conventionInterest` descending.
+- **Interest (`interest`):** Gauge tick count descending.
 - **Distance (`distance`):** `drive_minutes` ascending, unknown values last.
 - **Time of year (`time`):** Summarized `start_date` month (`1..12`) ascending, ignoring year, unknown values last.
 - **Name (`name`):** `display_name` ascending.
@@ -243,12 +244,12 @@ When a convention has a valid HTTP(S) or host-like `website` (`hrefForWebsite`),
 Displays editions in `waiting_to_apply`, `open`, `submitted`, `waitlisted`, and `approved` across five columns:
 
 - Within each column, cards without an action date (**Date not set**) sort first, followed by dated cards ascending, then convention name, then `cycle_label`.
-- Each card shows the convention title, cycle label, action date copy (`Applications open MM/DD`, `Apply by MM/DD`, `Estimated close MM/DD`, `Results expected MM/DD`, or `Event starts MM/DD`), relative day label from today (`today`, `in 3 days`, `2 days ago`), convention city/state, and interest hearts.
+- Each card shows the convention title, cycle label, convention-level interest gauge, action date copy (`Applications open MM/DD`, `Apply by MM/DD`, `Estimated close MM/DD`, `Results expected MM/DD`, or `Event starts MM/DD`), relative day label from today (`today`, `in 3 days`, `2 days ago`), and convention city/state.
 - Cards can be dragged (via pointer or keyboard) across any of the five columns. Dragging an `approved` card reveals **Attended** and **Withdrawn** drop targets at the bottom of the board, which transition the edition and remove it from Lineups.
 
 ### Calendar (`/calendar`) & Calendar Exports (`/api/ics/[editionId]`)
 
-- **In-app year grid (`/calendar?year=YYYY`):** Plots `application_start_date` (**Application opens**, amber) and `start_date` (**Starts**, emerald) for editions whose convention has `conventionInterest > 0`, including past dates. Excludes `skipped` and `withdrawn` editions. **Previous** and **Next** page by year and disable only when no markers exist beyond the viewed year; **Today** jumps to the current Los Angeles year and `#month-YYYY-MM`.
+- **In-app year grid (`/calendar?year=YYYY`):** Plots `application_start_date` (**Application opens**, amber) and `start_date` (**Starts**, emerald) for editions whose convention has `conventionInterest > 0`, including past dates. Excludes `skipped` and `withdrawn` editions. Each chip shows a compact convention-level gauge under the name. **Previous** and **Next** page by year and disable only when no markers exist beyond the viewed year; **Today** jumps to the current Los Angeles year and `#month-YYYY-MM`.
 - **Per-date exports:** On `/cons/[id]`, saved editions with `application_start_date` or `start_date` render **Download .ics** and **Google Calendar** links inline beside the field label:
   - `start_date` title: `{Convention} {cycle_label} starts`
   - `application_start_date` title: `{Convention} {cycle_label} artist alley opens`

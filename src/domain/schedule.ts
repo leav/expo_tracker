@@ -1,5 +1,5 @@
 import { conventions, editions } from "../db/schema";
-import { conventionInterest } from "./cons";
+import { conventionInterest, interestGauge, type InterestGauge } from "./cons";
 import { compareCycleLabels } from "./cycles";
 import type { TrackerDb } from "./db";
 import { isStatus } from "./status";
@@ -20,6 +20,7 @@ export type ScheduleMarker = {
   conventionName: string;
   cycleLabel: string;
   editionId: number;
+  gauge: InterestGauge;
 };
 
 export type ScheduleEditionRow = {
@@ -72,6 +73,7 @@ export function scheduleMarkersFromRows(rows: ScheduleConventionRow[]): Schedule
   for (const convention of rows) {
     const interest = conventionInterest(convention.manualInterest, convention.editions);
     if (interest <= 0) continue;
+    const gauge = interestGauge(convention.manualInterest, convention.editions);
 
     for (const edition of convention.editions) {
       if (!isStatus(edition.status) || excludedStatuses.has(edition.status)) continue;
@@ -80,6 +82,7 @@ export function scheduleMarkersFromRows(rows: ScheduleConventionRow[]): Schedule
         conventionName: convention.displayName,
         cycleLabel: edition.cycleLabel,
         editionId: edition.id,
+        gauge,
       };
       pushIfPresent(markers, edition.applicationStartDate, "application_start", base);
       pushIfPresent(markers, edition.startDate, "event_start", base);
