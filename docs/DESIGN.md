@@ -181,6 +181,8 @@ stateDiagram-v2
 
 Top navigation links **Expos**, **Lineups**, **Calendar**, and **Data**, alongside a **System / Light / Dark** theme toggle persisted in `localStorage` (`expo-tracker-theme`) and a fruit-emoji screenshot mask (in-memory for the tab). When the mask is on, displayed expo names, aliases, and notes replace each a-z word with one stable fruit emoji. Word splits are space, underscore, and PascalCase; `con`, `expo`, digits, and other non-a-z characters stay as-is. Masking is display-only: saves, sort order, calendar exports, websites, cities, and cycle labels stay real.
 
+A backup reminder bar sits under the nav on every page when the workspace has expos, IndexedDB persist is working, and at least 3 Los Angeles calendar days have passed since the first write after the last export (`staleSince`). Copy warns that the workspace lives only in this browser and that clearing site data erases it, then names days since the last export (or that none exists). **Export JSON** downloads the full JSON file (all expos, application status included) and clears `staleSince`. **Dismiss** snoozes the bar for 3 more days. Later writes do not move `staleSince`. If they have never exported and have not written since this reminder existed, there is no clock and the bar stays hidden. Timestamps (`staleSince`, `lastExported`, `snoozedUntil`) live in `localStorage` (`expo-tracker-backup`), not in the JSON document. A Data page download also counts as an export.
+
 | Route | Purpose |
 | --- | --- |
 | `/` | **Expos grid:** Compact catalog of expos with add-expo form and four sort modes. |

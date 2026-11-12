@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import { BackupReminder } from "../components/backup-reminder";
 import { FruitMaskProvider } from "../components/fruit-mask";
 import { ThemeScript } from "../components/theme-script";
 import { AppNav } from "./nav";
@@ -41,6 +42,7 @@ export default function RootLayout({
           <FruitMaskProvider>
             <AppNav />
             <PersistBanner />
+            <BackupReminder />
             <WorkspaceReady>{children}</WorkspaceReady>
           </FruitMaskProvider>
         </DatabaseProvider>

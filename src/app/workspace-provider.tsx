@@ -15,6 +15,8 @@ import { copySqliteBytes, idbGet, idbSet } from "../db/idb";
 import { createWorkspace, isSqliteBytes, type Workspace } from "../db/workspace";
 import { dataFileFromBytes, type DataFile } from "../domain/dataFile";
 import type { DomainResult, TrackerDb } from "../domain/db";
+import { todayInLosAngeles } from "../domain/status";
+import { browserBackupStorage, markModified } from "../lib/backup-reminder";
 
 type ImportDocument = {
   document: DataFile;
@@ -123,6 +125,8 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     return {
       ...state,
       persist: async () => {
+        const storage = browserBackupStorage();
+        if (storage) markModified(storage, todayInLosAngeles());
         setState((current) =>
           current.status === "ready" ? { ...current, revision: current.revision + 1 } : current,
         );

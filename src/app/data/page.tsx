@@ -5,13 +5,15 @@ import { useFruitMask } from "../../components/fruit-mask";
 import { Button } from "../../components/ui/button";
 import {
   applyDataFile,
-  dataFileDownloadName,
   exportDataFile,
   listExportConventions,
   previewDataFile,
   type DataFile,
   type DataFilePreview,
 } from "../../domain/dataFile";
+import { todayInLosAngeles } from "../../domain/status";
+import { browserBackupStorage, markExported } from "../../lib/backup-reminder";
+import { downloadDataFile } from "../../lib/data-file-download";
 import { useReadyWorkspace } from "../workspace-provider";
 
 export default function DataPage() {
@@ -47,16 +49,9 @@ function DataPageBody({
   function downloadExport() {
     const conventionIds = exportAll ? undefined : [...selectedIds];
     const file = exportDataFile(workspace.db, { includeApplicationStatus, conventionIds });
-    const body = `${JSON.stringify(file, null, 2)}\n`;
-    const blob = new Blob([body], { type: "application/json;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = window.document.createElement("a");
-    anchor.href = url;
-    anchor.download = dataFileDownloadName();
-    window.document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    downloadDataFile(file);
+    const storage = browserBackupStorage();
+    if (storage) markExported(storage, todayInLosAngeles());
     setMessage("JSON downloaded.");
   }
 
