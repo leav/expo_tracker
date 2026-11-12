@@ -24,6 +24,7 @@ import { GripVertical } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { ConventionTitle } from "../../components/convention-title";
+import { useFruitMask } from "../../components/fruit-mask";
 import { InterestGauge } from "../../components/interest-gauge";
 import {
   applyLineupMove,
@@ -105,6 +106,7 @@ function boardFingerprint(board: LineupBoard): string {
 
 export function LineupsBoard({ board: initialBoard, today }: { board: LineupBoard; today: string }) {
   const workspace = useReadyWorkspace();
+  const { mask } = useFruitMask();
   const [board, setBoard] = useState(initialBoard);
   const [appliedFingerprint, setAppliedFingerprint] = useState(() => boardFingerprint(initialBoard));
   const [activeItem, setActiveItem] = useState<LineupItem | null>(null);
@@ -156,7 +158,7 @@ export function LineupsBoard({ board: initialBoard, today }: { board: LineupBoar
         return;
       }
       setBoard(result.value);
-      setAnnouncement(`Moved ${item.conventionName} ${item.cycleLabel} to ${statusLabels[toStatus]}.`);
+      setAnnouncement(`Moved ${mask(item.conventionName)} ${item.cycleLabel} to ${statusLabels[toStatus]}.`);
       await workspace.persist();
     } catch (cause) {
       setBoard(previous);
@@ -331,13 +333,14 @@ function LineupCardLayout({
   isDragging?: boolean;
   handleProps?: ButtonHTMLAttributes<HTMLButtonElement>;
 }) {
+  const { mask } = useFruitMask();
   const detailHref = consEditionPath(item.conventionId, item.editionId);
   return (
     <article ref={cardRef} className={cn("flex gap-1 rounded-lg border bg-card p-2", isDragging ? "opacity-40" : "")}>
       <button
         type="button"
         className="mt-0.5 cursor-grab rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
-        aria-label={`Move ${item.conventionName} ${item.cycleLabel}`}
+        aria-label={`Move ${mask(item.conventionName)} ${item.cycleLabel}`}
         {...handleProps}
       >
         <GripVertical className="size-4" />

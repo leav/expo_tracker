@@ -19,6 +19,7 @@ import {
   type ScheduleKind,
   type ScheduleMarker,
 } from "../../domain/schedule";
+import { useFruitMask } from "../../components/fruit-mask";
 import { InterestGauge } from "../../components/interest-gauge";
 import { todayInLosAngeles } from "../../domain/status";
 import { consPath } from "../../lib/routes";
@@ -189,6 +190,7 @@ function MonthCard({
   today: string;
   isCurrentMonth: boolean;
 }) {
+  const { mask } = useFruitMask();
   const byDay = markersForMonth(markers, yearMonth);
   const cells = buildMonthCells(yearMonth);
 
@@ -212,7 +214,10 @@ function MonthCard({
           if (!cell.date) {
             return <div key={`empty-${yearMonth}-${index}`} className="min-h-14 bg-muted/40" />;
           }
-          const dayMarkers = byDay.get(cell.date) ?? [];
+          const dayMarkers = (byDay.get(cell.date) ?? []).map((marker) => ({
+            ...marker,
+            conventionName: mask(marker.conventionName),
+          }));
           const attentions = cellAttentions(dayMarkers);
           const reminder = cellAttentionTitle(dayMarkers);
           const isPast = cell.date < today;

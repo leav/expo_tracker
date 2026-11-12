@@ -1,8 +1,11 @@
+"use client";
+
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { hrefForWebsite } from "../domain/website";
 import { cn } from "../lib/utils";
+import { useFruitMask } from "./fruit-mask";
 
 type ConventionTitleProps = {
   name: string;
@@ -21,6 +24,8 @@ export function ConventionTitle({
   className,
   children,
 }: ConventionTitleProps) {
+  const { mask } = useFruitMask();
+  const displayName = mask(name);
   const href = hrefForWebsite(website);
   const Tag = as;
   const textClass = cn(
@@ -37,7 +42,7 @@ export function ConventionTitle({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
         >
-          {name}
+          {displayName}
           <ExternalLink className={as === "h1" ? "size-5 shrink-0" : "size-3.5 shrink-0"} aria-hidden />
           <span className="sr-only">(opens website)</span>
         </a>
@@ -50,7 +55,7 @@ export function ConventionTitle({
     return (
       <Tag className={textClass}>
         <Link href={fallbackHref} className="hover:underline">
-          {name}
+          {displayName}
         </Link>
         {children}
       </Tag>
@@ -59,7 +64,7 @@ export function ConventionTitle({
 
   return (
     <Tag className={textClass}>
-      {name}
+      {displayName}
       {children}
     </Tag>
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import { FruitMaskProvider } from "../components/fruit-mask";
 import { ThemeScript } from "../components/theme-script";
 import { AppNav } from "./nav";
 import { DatabaseProvider, PersistBanner, WorkspaceReady } from "./workspace-provider";
@@ -37,9 +38,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <DatabaseProvider>
-          <AppNav />
-          <PersistBanner />
-          <WorkspaceReady>{children}</WorkspaceReady>
+          <FruitMaskProvider>
+            <AppNav />
+            <PersistBanner />
+            <WorkspaceReady>{children}</WorkspaceReady>
+          </FruitMaskProvider>
         </DatabaseProvider>
       </body>
     </html>

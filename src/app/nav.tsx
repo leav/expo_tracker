@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FruitMaskToggle } from "../components/fruit-mask";
 import { ThemeToggle } from "../components/theme-toggle";
 
 const primary = [
@@ -24,6 +25,7 @@ export function AppNav() {
             ))}
           </nav>
           <ThemeToggle />
+          <FruitMaskToggle />
         </div>
       </div>
     </header>

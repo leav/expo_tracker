@@ -179,7 +179,7 @@ stateDiagram-v2
 
 ## Views & Routes
 
-Top navigation links **Expos**, **Lineups**, **Calendar**, and **Data**, alongside a **System / Light / Dark** theme toggle persisted in `localStorage` (`expo-tracker-theme`).
+Top navigation links **Expos**, **Lineups**, **Calendar**, and **Data**, alongside a **System / Light / Dark** theme toggle persisted in `localStorage` (`expo-tracker-theme`) and a fruit-emoji screenshot mask (in-memory for the tab). When the mask is on, displayed expo names, aliases, and notes replace each a-z word with one stable fruit emoji. Word splits are space, underscore, and PascalCase; `con`, `expo`, digits, and other non-a-z characters stay as-is. Masking is display-only: saves, sort order, calendar exports, websites, cities, and cycle labels stay real.
 
 | Route | Purpose |
 | --- | --- |

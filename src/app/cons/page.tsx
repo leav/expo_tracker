@@ -6,6 +6,7 @@ import { Suspense, useState, type FormEvent } from "react";
 import { ConfirmForm } from "../../components/confirm-form";
 import { ConventionTitle } from "../../components/convention-title";
 import { EditionDateFields, type CalendarLinks } from "../../components/edition-date-fields";
+import { FruitSafeText, useFruitMask } from "../../components/fruit-mask";
 import { InterestGauge } from "../../components/interest-gauge";
 import { Button } from "../../components/ui/button";
 import { calendarEventTitle, type ReminderKind } from "../../domain/calendarEvent";
@@ -37,6 +38,7 @@ function ConsDetailPage() {
   const workspace = useReadyWorkspace();
   const params = useSearchParams();
   const router = useRouter();
+  const { mask } = useFruitMask();
   const [error, setError] = useState<string | null>(null);
   if (!workspace) return null;
 
@@ -135,7 +137,7 @@ function ConsDetailPage() {
         >
           <input type="hidden" name="conventionId" value={convention.id} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Name" name="displayName" defaultValue={convention.displayName} required />
+            <Field label="Name" name="displayName" defaultValue={convention.displayName} required maskable />
             <Field label="Website" name="website" defaultValue={convention.website ?? ""} />
             <Field label="City" name="defaultCity" defaultValue={convention.defaultCity ?? ""} />
             <Field label="State" name="defaultRegion" defaultValue={convention.defaultRegion ?? ""} />
@@ -147,7 +149,7 @@ function ConsDetailPage() {
           </div>
           <label className="grid gap-1 text-sm">
             Notes
-            <textarea
+            <FruitSafeText
               name="notes"
               defaultValue={convention.notes ?? ""}
               rows={3}
@@ -181,7 +183,7 @@ function ConsDetailPage() {
           <ul className="grid gap-2">
             {series.aliases.map((alias) => (
               <li key={alias.id} className="flex items-center justify-between gap-3 text-sm">
-                <span>{alias.name}</span>
+                <span>{mask(alias.name)}</span>
                 <form onSubmit={(event) => void onRemoveAlias(event)}>
                   <input type="hidden" name="conventionId" value={convention.id} />
                   <input type="hidden" name="aliasId" value={alias.id} />
@@ -296,7 +298,7 @@ function EditionForm({
         </div>
         <label className="grid gap-1 text-sm">
           Notes
-          <textarea
+          <FruitSafeText
             name="notes"
             defaultValue={edition.notes ?? ""}
             rows={3}
@@ -333,6 +335,7 @@ function Field({
   required,
   placeholder,
   type = "text",
+  maskable = false,
 }: {
   label: string;
   name: string;
@@ -340,18 +343,31 @@ function Field({
   required?: boolean;
   placeholder?: string;
   type?: string;
+  maskable?: boolean;
 }) {
+  const className = "h-9 rounded-md border border-input bg-background px-2";
   return (
     <label className="grid gap-1 text-sm">
       {label}
-      <input
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        required={required}
-        placeholder={placeholder}
-        className="h-9 rounded-md border border-input bg-background px-2"
-      />
+      {maskable ? (
+        <FruitSafeText
+          name={name}
+          defaultValue={defaultValue}
+          required={required}
+          placeholder={placeholder}
+          type={type}
+          className={className}
+        />
+      ) : (
+        <input
+          name={name}
+          type={type}
+          defaultValue={defaultValue}
+          required={required}
+          placeholder={placeholder}
+          className={className}
+        />
+      )}
     </label>
   );
 }

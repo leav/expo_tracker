@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useFruitMask } from "../../components/fruit-mask";
 import { Button } from "../../components/ui/button";
 import {
   applyDataFile,
@@ -24,6 +25,7 @@ function DataPageBody({
 }: {
   workspace: NonNullable<ReturnType<typeof useReadyWorkspace>>;
 }) {
+  const { mask } = useFruitMask();
   const fileRef = useRef<HTMLInputElement>(null);
   const [includeApplicationStatus, setIncludeApplicationStatus] = useState(true);
   const [exportAll, setExportAll] = useState(true);
@@ -173,7 +175,7 @@ function DataPageBody({
                         });
                       }}
                     />
-                    {expo.name}
+                    {mask(expo.name)}
                   </label>
                 </li>
               ))}

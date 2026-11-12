@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { ConventionTitle } from "../components/convention-title";
+import { useFruitMask } from "../components/fruit-mask";
 import { InterestGauge } from "../components/interest-gauge";
 import { Button } from "../components/ui/button";
 import { listCons, parseConsSort, type ConsSortKey } from "../domain/cons";
@@ -32,6 +33,7 @@ function HomePage() {
   const workspace = useReadyWorkspace();
   const params = useSearchParams();
   const router = useRouter();
+  const { mask } = useFruitMask();
   const [error, setError] = useState<string | null>(null);
   if (!workspace) return null;
 
@@ -113,7 +115,7 @@ function HomePage() {
         {tiles.map((tile) => {
           const detailHref = consPath(tile.conventionId);
           const summary = [
-            tile.displayName,
+            mask(tile.displayName),
             tile.eventDate ?? "no event date",
             tile.statusLabel ?? (tile.hasEditions ? "unknown status" : "no editions"),
             tile.locationLabel ?? "no city",
