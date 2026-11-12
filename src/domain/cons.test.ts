@@ -13,8 +13,8 @@ import {
   type InterestGauge,
 } from "./cons";
 
-function gaugeWithCount(count: number): InterestGauge {
-  return { ...emptyInterestGauge, count };
+function gaugeWithCount(count: number, sortCount = count): InterestGauge {
+  return { ...emptyInterestGauge, count, sortCount };
 }
 
 function tile(overrides: Partial<ConsTile> & Pick<ConsTile, "conventionId" | "displayName">): ConsTile {
@@ -111,6 +111,7 @@ describe("representative edition, interest, and cons sorts", () => {
       { status: "rejected" },
     ]);
     assert.equal(gauge.count, 11);
+    assert.equal(gauge.sortCount, 13);
     assert.equal(
       gauge.summary,
       "3 interest, 1 unknown, 1 ready, 1 submitted, 2 attended, 1 withdrawn, 1 rejected, 1 skipped",
@@ -142,7 +143,21 @@ describe("representative edition, interest, and cons sorts", () => {
   it("shifts a tick from one status to another for optimistic lineup moves", () => {
     const gauge = interestGauge(0, [{ status: "approved" }, { status: "submitted" }]);
     assert.equal(shiftInterestGauge(gauge, "approved", "waiting_to_apply").summary, "1 waiting, 1 submitted");
-    assert.equal(shiftInterestGauge(gauge, "approved", "attended").summary, "1 submitted, 1 attended");
+    const attended = shiftInterestGauge(gauge, "approved", "attended");
+    assert.equal(attended.summary, "1 submitted, 1 attended");
+    assert.equal(attended.sortCount, 3);
+  });
+
+  it("sorts interest by sortCount so each attended tick counts as two", () => {
+    const tiles = [
+      tile({ conventionId: 1, displayName: "Beta", gauge: gaugeWithCount(1, 1) }),
+      tile({ conventionId: 2, displayName: "Alpha", gauge: gaugeWithCount(1, 2) }),
+      tile({ conventionId: 3, displayName: "Gamma", gauge: gaugeWithCount(2, 2) }),
+    ];
+    assert.deepEqual(
+      sortCons(tiles, "interest").map((row) => row.displayName),
+      ["Alpha", "Gamma", "Beta"],
+    );
   });
 
   it("sorts by gauge count, state, month, and name with name as the tie-break", () => {

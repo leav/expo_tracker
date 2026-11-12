@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { GaugeTick, InterestGauge } from "../domain/cons";
 import { cn } from "../lib/utils";
 
@@ -23,12 +24,19 @@ export function InterestGauge({
   className?: string;
 }) {
   if (gauge.count === 0) return null;
+  const tickRowStyle = {
+    "--gauge-tick-length": compact ? "0.5rem" : "0.875rem",
+    "--gauge-tick-gap": compact ? "1px" : "0.125rem",
+    "--gauge-tick-width": "calc((var(--gauge-tick-length) - var(--gauge-tick-gap)) / 2)",
+    gap: "var(--gauge-tick-gap)",
+  } as CSSProperties;
   return (
     <span className={cn("grid gap-1", className)}>
       <span
-        className={cn("inline-flex items-center", compact ? "flex-nowrap gap-px" : "flex-wrap gap-0.5")}
+        className={cn("inline-flex items-center", compact ? "flex-nowrap" : "flex-wrap")}
         title={gauge.summary}
         aria-label={gauge.summary}
+        style={tickRowStyle}
       >
         {gauge.ticks.map((tick, index) => (
           <span
@@ -36,10 +44,13 @@ export function InterestGauge({
             aria-hidden="true"
             className={cn(
               "box-border shrink-0 rounded-[1px]",
-              compact ? "h-2 w-[3px]" : "h-3.5 w-1.5",
               tick.filled ? "border-0" : "border border-muted-foreground bg-transparent",
             )}
-            style={tick.filled ? { backgroundColor: colorVar[tick.color] } : undefined}
+            style={{
+              height: "var(--gauge-tick-length)",
+              width: tick.kind === "attended" ? "var(--gauge-tick-length)" : "var(--gauge-tick-width)",
+              ...(tick.filled ? { backgroundColor: colorVar[tick.color] } : {}),
+            }}
           />
         ))}
       </span>

@@ -134,7 +134,7 @@ Each edition has a single lifecycle status:
 | `submitted` | Submitted | `result_date` (`Date not set` sorts first) | `+1` | Yellow |
 | `waitlisted` | Waitlisted | `start_date` (`Date not set` sorts first) | `+1` | Yellow |
 | `approved` | Approved | `start_date` (`Date not set` sorts first) | `+1` | Green |
-| `attended` | Attended | Excluded (drop target when dragging `approved` on Lineups) | `+1` | Blue |
+| `attended` | Attended | Excluded (drop target when dragging `approved` on Lineups) | `+1` | Blue square |
 | `rejected` | Rejected | Excluded | `+1` | Scarlet |
 | `withdrawn` | Withdrawn | Excluded (drop target when dragging `approved` on Lineups) | `0` | Blue |
 | `skipped` | Skipped | Excluded | `-1` | Gray |
@@ -144,8 +144,8 @@ When creating a new edition with status `unknown`, if `application_start_date` i
 ### Interest Calculation (`src/domain/cons.ts`)
 
 - **Total interest (calendar filter):** `conventionInterest = manual_interest + sum(editionInterest(edition.status))`. Calendar includes a convention when this value is greater than `0`.
-- **Gauge:** One CSS tick per edition, plus one light-pink tick per positive `manual_interest`. Negative manual interest does not render ticks. Ticks are grouped left to right: manual (light pink), unknown (hollow), waiting/ready/submitted/waitlisted (yellow), approved (green), attended/withdrawn (blue), rejected (scarlet), skipped (gray). Hover and `aria-label` use a zero-omitting summary such as `3 interest, 1 submitted, 2 attended`. An empty gauge renders nothing.
-- **Expos Interest sort:** Gauge tick count descending (editions + positive manual ticks, including hollow unknown), then `display_name`. Expos cards use a neutral `--card` background with no interest tint or score number.
+- **Gauge:** One CSS tick per edition, plus one light-pink tick per positive `manual_interest`. Negative manual interest does not render ticks. Attended ticks are squares; every other status is a rectangle whose height matches the square side and whose width satisfies `side = 2 × width + gap`, so one attended square occupies the same width as two rectangles plus the gap between them. Ticks are grouped left to right: manual (light pink), unknown (hollow), waiting/ready/submitted/waitlisted (yellow), approved (green), attended/withdrawn (blue), rejected (scarlet), skipped (gray). Hover and `aria-label` use a zero-omitting summary such as `3 interest, 1 submitted, 2 attended`. An empty gauge renders nothing.
+- **Expos Interest sort:** Gauge `sortCount` descending (editions + positive manual ticks, including hollow unknown; each attended tick counts as 2), then `display_name`. Expos cards use a neutral `--card` background with no interest tint or score number.
 - **Display:** The gauge sits under the convention name on Expos, Lineups (convention-level), Calendar chips (compact), and `/cons/[id]`. Detail shows the summary in plain text and keeps the manual-interest field.
 
 ### Date Auto-fill & Status Transitions (`src/domain/editionDates.ts`, `src/domain/statusDates.ts`)
@@ -193,10 +193,10 @@ Each tile summarizes one representative edition for its convention:
 2. Otherwise, most recent past edition with `start_date < today`;
 3. Otherwise, the edition with the greatest `cycle_label` (or **No editions** when none exist).
 
-Equal-date ties break by `cycle_label`. Sort buttons are **Name**, **Interest**, **Time of year**, **State** (hover titles: sort by names / number of tracked editions / time of year / state names). Default is **Name** (`/` with no `?sort=`). Sorts (with `display_name` ascending as final tie-breaker):
+Equal-date ties break by `cycle_label`. Sort buttons are **Name**, **Interest**, **Time of year**, **State** (hover titles: sort by names / interest gauge (attended counts as two) / time of year / state names). Default is **Name** (`/` with no `?sort=`). Sorts (with `display_name` ascending as final tie-breaker):
 
 - **Name (`name`):** `display_name` ascending.
-- **Interest (`interest`):** Gauge tick count descending.
+- **Interest (`interest`):** Gauge `sortCount` descending (attended ticks count as 2).
 - **Time of year (`time`):** Summarized `start_date` month (`1..12`) ascending, ignoring year, unknown values last.
 - **State (`state`):** `default_region` ascending, unknown values last.
 

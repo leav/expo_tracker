@@ -61,6 +61,7 @@ export type InterestGauge = {
   ticks: GaugeTick[];
   summary: string;
   count: number;
+  sortCount: number;
 };
 
 export const emptyInterestGauge: InterestGauge = {
@@ -68,6 +69,7 @@ export const emptyInterestGauge: InterestGauge = {
   ticks: [],
   summary: "",
   count: 0,
+  sortCount: 0,
 };
 
 const gaugeLabels: Record<GaugeKind, string> = {
@@ -195,6 +197,7 @@ function buildInterestGauge(counts: Map<GaugeKind, number>): InterestGauge {
     ticks,
     summary: segments.map((segment) => `${segment.count} ${segment.label}`).join(", "),
     count: ticks.length,
+    sortCount: ticks.reduce((sum, tick) => sum + (tick.kind === "attended" ? 2 : 1), 0),
   };
 }
 
@@ -238,7 +241,7 @@ export function sortCons(tiles: ConsTile[], key: ConsSortKey): ConsTile[] {
   const sorted = [...tiles];
   sorted.sort((a, b) => {
     if (key === "interest") {
-      return b.gauge.count - a.gauge.count || name(a, b);
+      return b.gauge.sortCount - a.gauge.sortCount || name(a, b);
     }
     if (key === "state") {
       const aRegion = regionSortKey(a.region);

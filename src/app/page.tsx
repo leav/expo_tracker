@@ -13,7 +13,7 @@ export const instant = false;
 
 const sorts: { key: ConsSortKey; label: string; title: string }[] = [
   { key: "name", label: "Name", title: "Sort by names" },
-  { key: "interest", label: "Interest", title: "Sort by number of tracked editions" },
+  { key: "interest", label: "Interest", title: "Sort by interest gauge (attended counts as two)" },
   { key: "time", label: "Time of year", title: "Sort by time of year" },
   { key: "state", label: "State", title: "Sort by state names" },
 ];
