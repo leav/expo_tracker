@@ -83,10 +83,19 @@ function HomePage() {
       ) : null}
 
       {conventions === 0 ? (
-        <p className="text-muted-foreground">
-          No expos yet. Add one here and give it an edition such as 2027. This app saves on this device only — use
-          Data to export a backup.
-        </p>
+        <div className="grid gap-3 text-muted-foreground">
+          <p>
+            No expos yet. Add one below, or go to{" "}
+            <Link href="/data" className="underline underline-offset-4">
+              Data
+            </Link>{" "}
+            to import a JSON file.
+          </p>
+          <p>
+            This app has no server — everything is stored in your own browser. You can export, share, and import a list
+            of expos.
+          </p>
+        </div>
       ) : null}
 
       <form
