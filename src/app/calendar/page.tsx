@@ -107,10 +107,7 @@ export default async function CalendarPage({
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Calendar</h1>
-          <p className="text-sm text-muted-foreground">
-            Application opens and event starts for conventions with interest above zero.
-          </p>
-          <p className="text-sm text-muted-foreground">⚠️ waiting or ready to apply · ✈️ approved</p>
+          <p className="text-sm text-muted-foreground">Application and event dates.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {previousDisabled ? (
