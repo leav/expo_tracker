@@ -1,34 +1,32 @@
 # Expo Tracker
 
-Local-first app for tracking artist-alley applications to recurring cons and expos. An expo is a stable series. Each year (or season, or Comiket number) is an edition. Data stays in this browser on this device.
+Browser-local app for tracking artist-alley / vendor applications to recurring cons and expos.
 
-The design, module map, and implementation notes are in [docs/DESIGN.md](docs/DESIGN.md).
+![Expos](screenshots/expos.png)
 
-## For artists
+![Lineups](screenshots/lineups.png)
 
-Open the [GitHub Pages URL](https://leav.github.io/expo_tracker/) for this repository. Nothing to install.
+![Calendar](screenshots/calendar.png)
 
-The first visit is an empty workspace. Add expos from the home page. Use **Data** to export JSON or import a JSON package. Switching computers, browsers, or clearing site data will lose the workspace unless you import a backup. Uncheck **Include application status** before sharing a file with someone else.
+## Why not Trello, Sheets, or Notion?
 
-## For contributors
+Yes, of course you can use Trello, Google Sheets, or Notion, and yes this app resembles some aspects of each of these products. What's different is that this is built and used by someone who needs to manage these expo applications day-to-day, so things are streamlined as much as possible — an integrated calendar view, status-aware lineups, dates that auto-fill, interest that actually means something. Plus it is AI-agent friendly, so you can build whatever feature by just asking your agent.
 
-From the repo root:
+## Usage
+
+Open the [GitHub Pages site](https://leav.github.io/expo_tracker/). Nothing to install. The first visit is an empty workspace in this browser on your device.
+
+Add expos from the home page, manage active appications on **Lineups**, and plan your schedules on **Calendar**.
+
+There is no server: all of your data stays in this browser on this device. **Clearing this site's data will erase the workspace**, so export a backup first if you need it. To move to another computer or browser, export and import.
+
+## Into the tech stuff?
+
+Design and domain rules live in [docs/DESIGN.md](docs/DESIGN.md). From the repo root:
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-The UI listens on [http://127.0.0.1:4747](http://127.0.0.1:4747). The first launch creates an empty workspace in IndexedDB. Later launches reuse it.
-
-`pnpm test` runs unit tests. `pnpm build` writes a static site to `out/`. `pnpm start` serves that folder on the same host and port.
-
-To move an existing desktop `vendor.sqlite` into the browser app, open **Data**, choose the file under Import, review the added/updated/removed summary, then **Commit import**.
-
-Browser verification should name test expos with a `[MOCK]` prefix and edition cycles with a `mock-` prefix. Delete those expos from each expo’s detail page before and after a run so test rows never mix with real data.
-
-Enable GitHub Pages (Source: GitHub Actions) so pushes to `main` publish `out/`.
-
-## Calendar files
-
-Saving an edition date does not create a calendar event. When application start or event start is set, **Download .ics** and **Google Calendar** sit next to that date. Import the file into your calendar app, or open the Google Calendar web template. Re-download after a date change; some apps, including Google Calendar, may duplicate instead of updating.
+The UI listens on [http://127.0.0.1:4747](http://127.0.0.1:4747). `pnpm test` runs unit tests. `pnpm build` writes a static site to `out/`. `pnpm start` serves that folder on the same host and port.
