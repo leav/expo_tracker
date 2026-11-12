@@ -122,71 +122,74 @@ function DataPageBody({
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Data</h1>
-        <p className="text-sm text-muted-foreground">
-          Export this workspace as JSON, or import a JSON package or a SQLite file from a local copy.
-        </p>
       </header>
 
       {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
 
-      <section className="grid gap-4 rounded-lg border bg-card p-4">
-        <h2 className="text-lg font-medium">Export</h2>
-        <label className="grid gap-1 text-sm">
-          <span className="flex items-center gap-2">
+      {expoCount > 0 ? (
+        <section className="grid gap-4 rounded-lg border bg-card p-4">
+          <h2 className="text-lg font-medium">Export</h2>
+          <p className="text-sm text-muted-foreground">
+            Download a JSON file of the expos in this browser. Use it as a backup, or share it with someone else.
+          </p>
+          <label className="grid gap-1 text-sm">
+            <span className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={includeApplicationStatus}
+                onChange={(event) => setIncludeApplicationStatus(event.target.checked)}
+              />
+              Include application status
+            </span>
+            <span className="text-muted-foreground">
+              Turn this off if you plan to share this file with someone else.
+            </span>
+          </label>
+          <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
-              checked={includeApplicationStatus}
-              onChange={(event) => setIncludeApplicationStatus(event.target.checked)}
+              checked={exportAll}
+              onChange={(event) => {
+                setExportAll(event.target.checked);
+                if (!event.target.checked) setSelectedIds(new Set());
+              }}
             />
-            Include application status
-          </span>
-          <span className="text-muted-foreground">
-            Turn this off if you plan to share this file with someone else.
-          </span>
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={exportAll}
-            onChange={(event) => {
-              setExportAll(event.target.checked);
-              if (!event.target.checked) setSelectedIds(new Set());
-            }}
-          />
-          Export all {expoCount} expos
-        </label>
-        {exportAll ? null : (
-          <ul className="grid max-h-80 gap-2 overflow-auto rounded-md border p-3">
-            {expos.map((expo) => (
-              <li key={expo.id}>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(expo.id)}
-                    onChange={(event) => {
-                      setSelectedIds((current) => {
-                        const next = new Set(current);
-                        if (event.target.checked) next.add(expo.id);
-                        else next.delete(expo.id);
-                        return next;
-                      });
-                    }}
-                  />
-                  {expo.name}
-                </label>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div>
-          <Button type="button" onClick={downloadExport} disabled={!canExport}>
-            Download JSON
-          </Button>
-        </div>
-      </section>
+            Export all {expoCount} expos
+          </label>
+          {exportAll ? null : (
+            <ul className="grid max-h-80 gap-2 overflow-auto rounded-md border p-3">
+              {expos.map((expo) => (
+                <li key={expo.id}>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(expo.id)}
+                      onChange={(event) => {
+                        setSelectedIds((current) => {
+                          const next = new Set(current);
+                          if (event.target.checked) next.add(expo.id);
+                          else next.delete(expo.id);
+                          return next;
+                        });
+                      }}
+                    />
+                    {expo.name}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div>
+            <Button type="button" onClick={downloadExport} disabled={!canExport}>
+              Download JSON
+            </Button>
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 rounded-lg border bg-card p-4">
         <h2 className="text-lg font-medium">Import</h2>
+        <p className="text-sm text-muted-foreground">Load a JSON file from a local copy.</p>
         <div>
           <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
             Choose file

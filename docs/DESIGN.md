@@ -225,7 +225,7 @@ Displays editions in `waiting_to_apply`, `open`, `submitted`, `waitlisted`, and 
 
 ### Data (`/data`)
 
-Export writes pretty-printed JSON (`expo-tracker-YYYY-MM-DD.json`, date in the browser’s local timezone). The document has `format: "expo-tracker"`, `version: 1`, and a nested `conventions` list keyed by series name (no database ids). Empty fields are omitted. Edition dates inside the file stay `YYYY-MM-DD` in `America/Los_Angeles`.
+Export writes pretty-printed JSON (`expo-tracker-YYYY-MM-DD.json`, date in the browser’s local timezone). The document has `format: "expo-tracker"`, `version: 1`, and a nested `conventions` list keyed by series name (no database ids). Empty fields are omitted. Edition dates inside the file stay `YYYY-MM-DD` in `America/Los_Angeles`. Export is hidden when there are no expos.
 
 - **Include application status** (default on): when off, omit `status`, `submittedAt`, `resultDate`, `paid`, `interest`, and notes so a shared file cannot overwrite someone else’s application on merge.
 - **Export all N expos** (default on): when off, show every expo sorted by name, all unselected, and the user opts in. Download is disabled until at least one expo is selected.
