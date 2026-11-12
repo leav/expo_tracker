@@ -389,7 +389,7 @@ function writeConvention(
   const current =
     existingId == null
       ? null
-      : db.select().from(conventions).where(eq(conventions.id, existingId)).get();
+      : db.select().from(conventions).where(eq(conventions.id, existingId)).get() ?? null;
   if (existingId != null && !current) return { ok: false, error: "That convention is gone." };
 
   const displayName = mergedDisplayName(db, incoming.name, current);
