@@ -6,7 +6,7 @@ The design, module map, and implementation notes are in [docs/DESIGN.md](docs/DE
 
 ## For artists
 
-Open the GitHub Pages URL for this repository. Nothing to install.
+Open the [GitHub Pages URL](https://leav.github.io/expo_tracker/) for this repository. Nothing to install.
 
 The first visit is an empty workspace. Add expos from the home page. Use **Data** in the header to **Export backup** (a `.sqlite` file) or **Import backup**. Switching computers, browsers, or clearing site data will lose the workspace unless you import a backup.
 
