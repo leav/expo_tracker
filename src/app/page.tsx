@@ -1,15 +1,17 @@
+"use client";
+
 import Link from "next/link";
-import { connection } from "next/server";
-import { createConventionAction } from "./actions";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState, type FormEvent } from "react";
 import { ConventionTitle } from "../components/convention-title";
 import { InterestGauge } from "../components/interest-gauge";
 import { Button } from "../components/ui/button";
 import { listCons, parseConsSort, type ConsSortKey } from "../domain/cons";
 import { countConventions } from "../domain/conventions";
 import { todayInLosAngeles } from "../domain/status";
-import { openDatabase } from "../db";
-
-export const instant = false;
+import { consPath } from "../lib/routes";
+import { submitCreateConvention } from "./mutations";
+import { useReadyWorkspace } from "./workspace-provider";
 
 const sorts: { key: ConsSortKey; label: string; title: string }[] = [
   { key: "name", label: "Name", title: "Sort by names" },
@@ -18,26 +20,45 @@ const sorts: { key: ConsSortKey; label: string; title: string }[] = [
   { key: "state", label: "State", title: "Sort by state names" },
 ];
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string; sort?: string }>;
-}) {
-  await connection();
-  const params = await searchParams;
-  const sort = parseConsSort(params.sort);
-  const db = openDatabase();
-  const tiles = listCons(db, sort, todayInLosAngeles());
-  const conventions = countConventions(db);
+export default function Home() {
+  return (
+    <Suspense>
+      <HomePage />
+    </Suspense>
+  );
+}
+
+function HomePage() {
+  const workspace = useReadyWorkspace();
+  const params = useSearchParams();
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  if (!workspace) return null;
+
+  const sort = parseConsSort(params.get("sort") ?? undefined);
+  const tiles = listCons(workspace.db, sort, todayInLosAngeles());
+  const conventions = countConventions(workspace.db);
+
+  async function onCreate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const result = submitCreateConvention(workspace!.db, new FormData(form));
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setError(null);
+    form.reset();
+    await workspace!.persist();
+    router.push(consPath(result.value.id));
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Expos</h1>
-          <p className="text-sm text-muted-foreground">
-            List of all tracked expos.
-          </p>
+          <p className="text-sm text-muted-foreground">List of all tracked expos.</p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
           {sorts.map((item) => (
@@ -57,17 +78,21 @@ export default async function Home({
         </div>
       </header>
 
-      {params.error ? (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">{params.error}</p>
+      {error ? (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">{error}</p>
       ) : null}
 
       {conventions === 0 ? (
         <p className="text-muted-foreground">
-          No expos yet. Add one here and give it an edition such as 2027.
+          No expos yet. Add one here and give it an edition such as 2027. This app saves on this device only — use
+          Data in the header to export a backup.
         </p>
       ) : null}
 
-      <form action={createConventionAction} className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] sm:items-end">
+      <form
+        onSubmit={(event) => void onCreate(event)}
+        className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] sm:items-end"
+      >
         <Field label="Expo" name="displayName" required placeholder="FanimeCon" />
         <Field label="Website" name="website" placeholder="https://" />
         <Field label="City" name="defaultCity" placeholder="San Jose" />
@@ -77,7 +102,7 @@ export default async function Home({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {tiles.map((tile) => {
-          const detailHref = `/cons/${tile.conventionId}`;
+          const detailHref = consPath(tile.conventionId);
           const summary = [
             tile.displayName,
             tile.eventDate ?? "no event date",

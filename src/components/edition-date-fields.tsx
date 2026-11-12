@@ -12,8 +12,8 @@ type DateDefaults = {
   endDate?: string;
 };
 
-export type CalendarHrefs = {
-  icsHref: string;
+export type CalendarLinks = {
+  onIcsDownload: () => void;
   googleHref: string;
 };
 
@@ -24,8 +24,8 @@ export function EditionDateFields({
 }: {
   defaults?: DateDefaults;
   calendar?: {
-    applicationStart?: CalendarHrefs;
-    eventStart?: CalendarHrefs;
+    applicationStart?: CalendarLinks;
+    eventStart?: CalendarLinks;
   };
   fieldIdPrefix?: string;
 }) {
@@ -108,7 +108,7 @@ function DateField({
   defaultValue?: string;
   onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (event: FocusEvent<HTMLInputElement>) => void;
-  calendar?: CalendarHrefs;
+  calendar?: CalendarLinks;
   fieldIdPrefix?: string;
 }) {
   const inputId = fieldIdPrefix ? `${fieldIdPrefix}-${name}` : name;
@@ -118,9 +118,13 @@ function DateField({
         <label htmlFor={inputId}>{label}</label>
         {calendar ? (
           <>
-            <a href={calendar.icsHref} className="text-xs underline underline-offset-2">
+            <button
+              type="button"
+              onClick={calendar.onIcsDownload}
+              className="text-xs underline underline-offset-2"
+            >
               Download .ics
-            </a>
+            </button>
             <a
               href={calendar.googleHref}
               target="_blank"

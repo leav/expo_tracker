@@ -12,6 +12,7 @@ export function ConfirmForm({
       onSubmit={(event) => {
         if (!window.confirm(message)) {
           event.preventDefault();
+          return;
         }
         props.onSubmit?.(event);
       }}

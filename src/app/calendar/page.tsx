@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { connection } from "next/server";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import {
   buildMonthCells,
   canShiftYear,
@@ -18,9 +21,8 @@ import {
 } from "../../domain/schedule";
 import { InterestGauge } from "../../components/interest-gauge";
 import { todayInLosAngeles } from "../../domain/status";
-import { openDatabase } from "../../db";
-
-export const instant = false;
+import { consPath } from "../../lib/routes";
+import { useReadyWorkspace } from "../workspace-provider";
 
 const weekdayLabels = ["S", "M", "T", "W", "T", "F", "S"] as const;
 
@@ -70,18 +72,23 @@ function navButtonClass(disabled: boolean): string {
   return "rounded-md border px-3 py-1.5 hover:border-foreground/40";
 }
 
-export default async function CalendarPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ year?: string }>;
-}) {
-  await connection();
-  const params = await searchParams;
+export default function CalendarPage() {
+  return (
+    <Suspense>
+      <CalendarView />
+    </Suspense>
+  );
+}
+
+function CalendarView() {
+  const workspace = useReadyWorkspace();
+  const params = useSearchParams();
+  if (!workspace) return null;
   const today = todayInLosAngeles();
   const currentYear = today.slice(0, 4);
   const currentYearMonth = today.slice(0, 7);
-  const year = parseYear(params.year, today);
-  const markers = listScheduleMarkers(openDatabase());
+  const year = parseYear(params.get("year") ?? undefined, today);
+  const markers = listScheduleMarkers(workspace.db);
   const previousYear = shiftYear(year, -1);
   const nextYear = shiftYear(year, 1);
   const previousDisabled = !canShiftYear(markers, year, -1);
@@ -229,7 +236,7 @@ function MonthCard({
                   return (
                     <Link
                       key={`${marker.editionId}-${marker.kind}`}
-                      href={`/cons/${marker.conventionId}`}
+                      href={consPath(marker.conventionId)}
                       className={`block overflow-hidden rounded border px-0.5 py-0.5 leading-snug ${chipClass(marker.kind)}`}
                       title={title}
                     >

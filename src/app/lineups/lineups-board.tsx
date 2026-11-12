@@ -23,7 +23,6 @@ import { cn } from "cn";
 import { GripVertical } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore, type ButtonHTMLAttributes, type ReactNode } from "react";
-import { moveLineupEditionAction } from "../actions";
 import { ConventionTitle } from "../../components/convention-title";
 import { InterestGauge } from "../../components/interest-gauge";
 import {
@@ -33,6 +32,9 @@ import {
   type LineupItem,
 } from "../../domain/lineupBoard";
 import { isStatus, statusLabels, type LineupStatus, type Status } from "../../domain/status";
+import { consEditionPath } from "../../lib/routes";
+import { submitMoveLineupEdition } from "../mutations";
+import { useReadyWorkspace } from "../workspace-provider";
 
 function subscribeClientReady() {
   return () => {};
@@ -102,6 +104,7 @@ function boardFingerprint(board: LineupBoard): string {
 }
 
 export function LineupsBoard({ board: initialBoard, today }: { board: LineupBoard; today: string }) {
+  const workspace = useReadyWorkspace();
   const [board, setBoard] = useState(initialBoard);
   const [appliedFingerprint, setAppliedFingerprint] = useState(() => boardFingerprint(initialBoard));
   const [activeItem, setActiveItem] = useState<LineupItem | null>(null);
@@ -140,19 +143,21 @@ export function LineupsBoard({ board: initialBoard, today }: { board: LineupBoar
     if (!item || !toStatus || saving) return;
     if (!canMoveLineupStatus(item.status, toStatus)) return;
 
+    if (!workspace) return;
     const previous = board;
     setError(null);
     setSaving(true);
     setBoard(applyLineupMove(board, item.editionId, toStatus, today));
     try {
-      const result = await moveLineupEditionAction(item.editionId, toStatus);
+      const result = submitMoveLineupEdition(workspace.db, item.editionId, toStatus);
       if (!result.ok) {
         setBoard(previous);
         setError(result.error);
         return;
       }
-      setBoard(result.board);
+      setBoard(result.value);
       setAnnouncement(`Moved ${item.conventionName} ${item.cycleLabel} to ${statusLabels[toStatus]}.`);
+      await workspace.persist();
     } catch (cause) {
       setBoard(previous);
       setError(cause instanceof Error ? cause.message : "Could not move that edition.");
@@ -193,7 +198,7 @@ export function LineupsBoard({ board: initialBoard, today }: { board: LineupBoar
             {activeItem ? (
               <LineupCardFace
                 item={activeItem}
-                detailHref={`/cons/${activeItem.conventionId}#edition-${activeItem.editionId}`}
+                detailHref={consEditionPath(activeItem.conventionId, activeItem.editionId)}
                 className="rounded-lg border bg-card p-3 shadow-lg"
               />
             ) : null}
@@ -326,7 +331,7 @@ function LineupCardLayout({
   isDragging?: boolean;
   handleProps?: ButtonHTMLAttributes<HTMLButtonElement>;
 }) {
-  const detailHref = `/cons/${item.conventionId}#edition-${item.editionId}`;
+  const detailHref = consEditionPath(item.conventionId, item.editionId);
   return (
     <article ref={cardRef} className={cn("flex gap-1 rounded-lg border bg-card p-2", isDragging ? "opacity-40" : "")}>
       <button

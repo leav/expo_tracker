@@ -1,46 +1,112 @@
+"use client";
+
 import { Trash2 } from "lucide-react";
-import { notFound } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState, type FormEvent } from "react";
+import { ConfirmForm } from "../../components/confirm-form";
+import { ConventionTitle } from "../../components/convention-title";
+import { EditionDateFields, type CalendarLinks } from "../../components/edition-date-fields";
+import { InterestGauge } from "../../components/interest-gauge";
+import { Button } from "../../components/ui/button";
+import { calendarEventTitle, type ReminderKind } from "../../domain/calendarEvent";
+import { getSeries } from "../../domain/editions";
+import { hrefForGoogleCalendarTemplate, icsFilename, icsForReminder } from "../../domain/ics";
+import { isPaidStatus, isStatus, statusLabels, statuses } from "../../domain/status";
+import type { editions } from "../../db/schema";
+import { downloadIcsFile } from "../../lib/ics-download";
 import {
-  addAliasAction,
-  createEditionAction,
-  deleteConventionAction,
-  deleteEditionAction,
-  removeAliasAction,
-  updateConventionAction,
-  updateEditionAction,
-} from "../../actions";
-import { ConfirmForm } from "../../../components/confirm-form";
-import { ConventionTitle } from "../../../components/convention-title";
-import { EditionDateFields, type CalendarHrefs } from "../../../components/edition-date-fields";
-import { InterestGauge } from "../../../components/interest-gauge";
-import { Button } from "../../../components/ui/button";
-import { calendarEventTitle, type ReminderKind } from "../../../domain/calendarEvent";
-import { getSeries } from "../../../domain/editions";
-import { hrefForGoogleCalendarTemplate } from "../../../domain/ics";
-import { isPaidStatus, isStatus, statusLabels, statuses } from "../../../domain/status";
-import { openDatabase } from "../../../db";
-import type { editions } from "../../../db/schema";
+  submitAddAlias,
+  submitCreateEdition,
+  submitDeleteConvention,
+  submitDeleteEdition,
+  submitRemoveAlias,
+  submitUpdateConvention,
+  submitUpdateEdition,
+} from "../mutations";
+import { useReadyWorkspace } from "../workspace-provider";
 
-export const instant = false;
+export default function ConsPage() {
+  return (
+    <Suspense>
+      <ConsDetailPage />
+    </Suspense>
+  );
+}
 
-export default async function ConsDetailPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const { id } = await params;
-  const query = await searchParams;
-  const conventionId = Number(id);
-  if (!Number.isInteger(conventionId)) notFound();
-  const db = openDatabase();
-  const series = getSeries(db, conventionId);
-  if (!series) notFound();
+function ConsDetailPage() {
+  const workspace = useReadyWorkspace();
+  const params = useSearchParams();
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  if (!workspace) return null;
+
+  const conventionId = Number(params.get("id"));
+  if (!Number.isInteger(conventionId)) {
+    return <MissingConvention />;
+  }
+  const series = getSeries(workspace.db, conventionId);
+  if (!series) return <MissingConvention />;
   const convention = series.convention;
 
+  function fail(result: { ok: false; error: string } | { ok: true; value: unknown }) {
+    if (!result.ok) {
+      setError(result.error);
+      return true;
+    }
+    setError(null);
+    return false;
+  }
+
+  async function onUpdateConvention(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (fail(submitUpdateConvention(workspace!.db, new FormData(event.currentTarget)))) return;
+    await workspace!.persist();
+  }
+
+  async function onDeleteConvention(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (fail(submitDeleteConvention(workspace!.db, new FormData(event.currentTarget)))) return;
+    await workspace!.persist();
+    router.push("/");
+  }
+
+  async function onAddAlias(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (fail(submitAddAlias(workspace!.db, new FormData(form)))) return;
+    form.reset();
+    await workspace!.persist();
+  }
+
+  async function onRemoveAlias(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    submitRemoveAlias(workspace!.db, new FormData(event.currentTarget));
+    setError(null);
+    await workspace!.persist();
+  }
+
+  async function onCreateEdition(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (fail(submitCreateEdition(workspace!.db, new FormData(form)))) return;
+    form.reset();
+    await workspace!.persist();
+  }
+
+  async function onUpdateEdition(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (fail(submitUpdateEdition(workspace!.db, new FormData(event.currentTarget)))) return;
+    await workspace!.persist();
+  }
+
+  async function onDeleteEdition(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (fail(submitDeleteEdition(workspace!.db, new FormData(event.currentTarget)))) return;
+    await workspace!.persist();
+  }
+
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
+    <main key={workspace.revision} className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
       <header className="grid gap-2">
         <ConventionTitle as="h1" name={convention.displayName} website={convention.website} />
         <InterestGauge gauge={series.gauge} showSummary />
@@ -57,14 +123,14 @@ export default async function ConsDetailPage({
           />
         </label>
       </header>
-      {query.error ? (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">{query.error}</p>
+      {error ? (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">{error}</p>
       ) : null}
 
       <div className="grid gap-3 rounded-lg border bg-card p-4">
         <form
           id={`save-convention-${convention.id}`}
-          action={updateConventionAction}
+          onSubmit={(event) => void onUpdateConvention(event)}
           className="grid gap-3"
         >
           <input type="hidden" name="conventionId" value={convention.id} />
@@ -94,16 +160,11 @@ export default async function ConsDetailPage({
             Save convention
           </Button>
           <ConfirmForm
-            action={deleteConventionAction}
+            onSubmit={(event) => void onDeleteConvention(event)}
             message="Delete this convention and all of its editions?"
           >
             <input type="hidden" name="conventionId" value={convention.id} />
-            <Button
-              type="submit"
-              size="icon"
-              variant="destructive"
-              aria-label="Delete convention"
-            >
+            <Button type="submit" size="icon" variant="destructive" aria-label="Delete convention">
               <Trash2 />
             </Button>
           </ConfirmForm>
@@ -113,25 +174,31 @@ export default async function ConsDetailPage({
       <section className="grid gap-3">
         <h2 className="text-lg font-medium">Aliases</h2>
         {series.aliases.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No aliases. Add a name that does not already match this convention.</p>
+          <p className="text-sm text-muted-foreground">
+            No aliases. Add a name that does not already match this convention.
+          </p>
         ) : (
           <ul className="grid gap-2">
             {series.aliases.map((alias) => (
               <li key={alias.id} className="flex items-center justify-between gap-3 text-sm">
                 <span>{alias.name}</span>
-                <form action={removeAliasAction}>
+                <form onSubmit={(event) => void onRemoveAlias(event)}>
                   <input type="hidden" name="conventionId" value={convention.id} />
                   <input type="hidden" name="aliasId" value={alias.id} />
-                  <Button type="submit" variant="outline" size="sm">Remove</Button>
+                  <Button type="submit" variant="outline" size="sm">
+                    Remove
+                  </Button>
                 </form>
               </li>
             ))}
           </ul>
         )}
-        <form action={addAliasAction} className="flex flex-wrap items-end gap-2">
+        <form onSubmit={(event) => void onAddAlias(event)} className="flex flex-wrap items-end gap-2">
           <input type="hidden" name="conventionId" value={convention.id} />
           <Field label="Alias" name="name" required placeholder="ALA" />
-          <Button type="submit" variant="outline">Add alias</Button>
+          <Button type="submit" variant="outline">
+            Add alias
+          </Button>
         </form>
       </section>
 
@@ -141,9 +208,18 @@ export default async function ConsDetailPage({
           <p className="text-sm text-muted-foreground">No editions yet. Add the first cycle below.</p>
         ) : null}
         {series.editions.map((edition) => (
-          <EditionForm key={edition.id} edition={edition} conventionName={convention.displayName} />
+          <EditionForm
+            key={edition.id}
+            edition={edition}
+            conventionName={convention.displayName}
+            onUpdate={onUpdateEdition}
+            onDelete={onDeleteEdition}
+          />
         ))}
-        <form action={createEditionAction} className="grid gap-3 rounded-lg border border-dashed p-4">
+        <form
+          onSubmit={(event) => void onCreateEdition(event)}
+          className="grid gap-3 rounded-lg border border-dashed p-4"
+        >
           <h3 className="font-medium">Add edition</h3>
           <input type="hidden" name="conventionId" value={convention.id} />
           <input type="hidden" name="status" value="unknown" />
@@ -151,9 +227,19 @@ export default async function ConsDetailPage({
             <Field label="Cycle" name="cycleLabel" required placeholder="2027" />
             <EditionDateFields />
           </div>
-          <Button type="submit" className="w-fit">Add edition</Button>
+          <Button type="submit" className="w-fit">
+            Add edition
+          </Button>
         </form>
       </section>
+    </main>
+  );
+}
+
+function MissingConvention() {
+  return (
+    <main className="mx-auto w-full max-w-3xl px-4 py-6 text-sm text-muted-foreground sm:px-6">
+      That convention is gone.
     </main>
   );
 }
@@ -161,16 +247,20 @@ export default async function ConsDetailPage({
 function EditionForm({
   edition,
   conventionName,
+  onUpdate,
+  onDelete,
 }: {
   edition: typeof editions.$inferSelect;
   conventionName: string;
+  onUpdate: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
+  onDelete: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
 }) {
   const status = isStatus(edition.status) ? edition.status : "unknown";
   const showPaid = isPaidStatus(status);
   const saveFormId = `save-edition-${edition.id}`;
   return (
     <div id={`edition-${edition.id}`} className="grid scroll-mt-6 gap-3 rounded-lg border bg-card p-4">
-      <form id={saveFormId} action={updateEditionAction} className="grid gap-3">
+      <form id={saveFormId} onSubmit={(event) => void onUpdate(event)} className="grid gap-3">
         <input type="hidden" name="conventionId" value={edition.conventionId} />
         <input type="hidden" name="editionId" value={edition.id} />
         <div className="grid gap-3 sm:grid-cols-2">
@@ -224,15 +314,10 @@ function EditionForm({
         <Button type="submit" form={saveFormId}>
           Save edition
         </Button>
-        <ConfirmForm action={deleteEditionAction} message="Delete this edition?">
+        <ConfirmForm onSubmit={(event) => void onDelete(event)} message="Delete this edition?">
           <input type="hidden" name="conventionId" value={edition.conventionId} />
           <input type="hidden" name="editionId" value={edition.id} />
-          <Button
-            type="submit"
-            size="icon"
-            variant="destructive"
-            aria-label="Delete edition"
-          >
+          <Button type="submit" size="icon" variant="destructive" aria-label="Delete edition">
             <Trash2 />
           </Button>
         </ConfirmForm>
@@ -277,15 +362,26 @@ function calendarLinksForDate(
   date: string | null,
   conventionName: string,
   cycleLabel: string,
-): CalendarHrefs | undefined {
+): CalendarLinks | undefined {
   const googleHref = hrefForGoogleCalendarTemplate({
     title: calendarEventTitle(kind, conventionName, cycleLabel),
     date,
   });
-  if (!googleHref) return undefined;
+  const body = icsForReminder({
+    kind,
+    conventionName,
+    cycleLabel,
+    date,
+    editionId,
+  });
+  if (!googleHref || !body) return undefined;
   return {
-    icsHref: `/api/ics/${editionId}?kind=${kind}`,
     googleHref,
+    onIcsDownload: () =>
+      downloadIcsFile(
+        icsFilename({ kind, conventionName, cycleLabel }),
+        body,
+      ),
   };
 }
 
@@ -303,7 +399,9 @@ function SelectField({
       {label}
       <select name={name} defaultValue={value} className="h-9 rounded-md border border-input bg-background px-2">
         {statuses.map((option) => (
-          <option key={option} value={option}>{statusLabels[option]}</option>
+          <option key={option} value={option}>
+            {statusLabels[option]}
+          </option>
         ))}
       </select>
     </label>

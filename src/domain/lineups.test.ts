@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import * as schema from "../db/schema";
+import type { Database } from "sql.js";
+import { openMemoryDatabase } from "../db/memory";
 import { editions } from "../db/schema";
 import { createConvention } from "./conventions";
 import type { TrackerDb } from "./db";
@@ -290,14 +288,13 @@ describe("lineups dates and grouping", () => {
 });
 
 describe("lineup writes", () => {
-  let sqlite: Database.Database;
+  let sqlite: Database;
   let db: TrackerDb;
 
-  before(() => {
-    sqlite = new Database(":memory:");
-    sqlite.pragma("foreign_keys = ON");
-    db = drizzle(sqlite, { schema });
-    migrate(db, { migrationsFolder: "drizzle" });
+  before(async () => {
+    const opened = await openMemoryDatabase();
+    sqlite = opened.sqlite;
+    db = opened.db;
   });
 
   after(() => {

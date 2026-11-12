@@ -1,6 +1,6 @@
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { SQLJsDatabase } from "drizzle-orm/sql-js";
 import type * as schema from "../db/schema";
 
-export type TrackerDb = BetterSQLite3Database<typeof schema>;
+export type TrackerDb = SQLJsDatabase<typeof schema>;
 
 export type DomainResult<T> = { ok: true; value: T } | { ok: false; error: string };

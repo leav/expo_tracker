@@ -90,9 +90,10 @@ export function escapeIcsText(value: string): string {
 }
 
 export function foldIcsLine(line: string): string {
-  const bytes = Buffer.from(line, "utf8");
+  const bytes = new TextEncoder().encode(line);
   if (bytes.length <= ICS_LINE_OCTETS) return line;
 
+  const decoder = new TextDecoder();
   const parts: string[] = [];
   let offset = 0;
   let limit = ICS_LINE_OCTETS;
@@ -100,7 +101,7 @@ export function foldIcsLine(line: string): string {
     let end = Math.min(offset + limit, bytes.length);
     while (end > offset && (bytes[end] & 0xc0) === 0x80) end -= 1;
     if (end === offset) end = Math.min(offset + limit, bytes.length);
-    parts.push(bytes.subarray(offset, end).toString("utf8"));
+    parts.push(decoder.decode(bytes.subarray(offset, end)));
     offset = end;
     limit = ICS_LINE_OCTETS - 1;
   }

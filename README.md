@@ -1,10 +1,16 @@
 # Expo Tracker
 
-Local app for tracking artist-alley applications to recurring cons and expos. A convention is a stable series. Each year (or season, or Comiket number) is an edition.
+Local-first app for tracking artist-alley applications to recurring cons and expos. A convention is a stable series. Each year (or season, or Comiket number) is an edition. Data stays in this browser on this device.
 
 The design, module map, and implementation notes are in [docs/DESIGN.md](docs/DESIGN.md).
 
-## Run
+## For artists
+
+Open the GitHub Pages URL for this repository. Nothing to install.
+
+The first visit is an empty workspace. Add expos from the home page. Use **Data** in the header to **Export backup** (a `.sqlite` file) or **Import backup**. Switching computers, browsers, or clearing site data will lose the workspace unless you import a backup.
+
+## For contributors
 
 From the repo root:
 
@@ -13,9 +19,15 @@ pnpm install
 pnpm dev
 ```
 
-The UI listens on [http://127.0.0.1:4747](http://127.0.0.1:4747). The first launch creates `data/vendor.sqlite`. Later launches reuse that file.
+The UI listens on [http://127.0.0.1:4747](http://127.0.0.1:4747). The first launch creates an empty workspace in IndexedDB. Later launches reuse it.
 
-`pnpm mock:clean` deletes conventions whose names start with `[MOCK]` (also `MOCK:` / `MOCK -`) and any leftover editions whose cycle labels start with `mock-`. Use that before and after browser verification so test rows never mix with real data. Do not edit real conventions or editions while verifying UI milestones.
+`pnpm test` runs unit tests. `pnpm build` writes a static site to `out/`. `pnpm start` serves that folder on the same host and port.
+
+To move an existing desktop `vendor.sqlite` into the browser app, open **Data → Import backup** and choose the file.
+
+**Data → Remove mock rows** deletes conventions whose names start with `[MOCK]` (also `MOCK:` / `MOCK -`) and leftover editions whose cycle labels start with `mock-`. Use that before and after browser verification so test rows never mix with real data.
+
+Enable GitHub Pages (Source: GitHub Actions) so pushes to `main` publish `out/`.
 
 ## Calendar files
 

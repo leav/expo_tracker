@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeScript } from "../components/theme-script";
 import { AppNav } from "./nav";
+import { DatabaseProvider, PersistBanner, WorkspaceReady } from "./workspace-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,8 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Expo Tracker",
-  description:
-    "Local tracker for artist-alley applications to cons that come back every year.",
+  description: "Tracker for artist-alley applications to cons that come back every year.",
 };
 
 export default function RootLayout({
@@ -36,8 +36,11 @@ export default function RootLayout({
         <ThemeScript />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <AppNav />
-        {children}
+        <DatabaseProvider>
+          <AppNav />
+          <PersistBanner />
+          <WorkspaceReady>{children}</WorkspaceReady>
+        </DatabaseProvider>
       </body>
     </html>
   );

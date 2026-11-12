@@ -1,26 +1,18 @@
 # Agent handoff
 
-This repo is a local artist-alley vendor tracker. The product design is settled. Start at the first milestone marked `not started`.
+This repo is a local-first artist-alley vendor tracker. The product design is the live spec in [docs/DESIGN.md](docs/DESIGN.md). Read it before writing code. Do not reopen locked decisions, the domain model, or the inbox rules.
 
-Read [docs/DESIGN.md](docs/DESIGN.md) before writing code. Use it in this order:
+The repository root is the project root.
 
-1. The milestone status table at the top.
-2. The milestone section for the first row whose status is `not started`.
-3. Locked decisions, the domain model, and the inbox rules. Do not reopen those.
-
-One milestone per session. Do not start the next milestone in the same change. When a milestone is finished, set its status to `done` in the table and add one line under the milestone: what landed, and anything the next agent must know.
-
-The owner's Mac checkout path is `/Users/songye/Development/vendor_tracker`. In a cloud workspace, the repository root is the project root. Do not create `/Users/songye` on the remote machine.
-
-UI milestones are done only after the flow has been exercised in a browser (or, if no browser is available, against the running local server) and the result is described in the milestone note.
+UI work is done only after the flow has been exercised in a browser (or, if no browser is available, against the running local server).
 
 ### Mock data for browser verification
 
-Browser and manual checks run against `data/vendor.sqlite`. Do not create, edit, drag, or delete real (non-mock) conventions or editions.
+Browser and manual checks run against the in-browser workspace (IndexedDB). Do not create, edit, drag, or delete real (non-mock) conventions or editions.
 
 - Name every test convention with a `[MOCK]` prefix, for example `[MOCK] Calendar Con`.
 - Name every test edition cycle with a `mock-` prefix, for example `mock-2027`.
-- Run `pnpm mock:clean` before and after browser verification so aborted runs do not leave mock rows behind.
+- Use **Data → Remove mock rows** before and after browser verification so aborted runs do not leave mock rows behind.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

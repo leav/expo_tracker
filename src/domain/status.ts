@@ -50,7 +50,7 @@ export function isStatus(value: string): value is Status {
   return (statuses as readonly string[]).includes(value);
 }
 
-export function isLineupStatus(status: Status): boolean {
+export function isLineupStatus(status: Status): status is LineupStatus {
   return lineupStatusSet.has(status);
 }
 

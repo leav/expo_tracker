@@ -147,7 +147,8 @@ export function lineupDateLabel(descriptor: LineupDescriptor): string {
 }
 
 export function presentLineupItem(source: LineupSource, today: string): LineupItem | null {
-  if (!isLineupStatus(source.status)) return null;
+  const status = source.status;
+  if (!isLineupStatus(status)) return null;
   const descriptor = lineupDescriptor(source);
   if (!descriptor) return null;
   return {
@@ -156,8 +157,8 @@ export function presentLineupItem(source: LineupSource, today: string): LineupIt
     conventionName: source.conventionName,
     website: source.website,
     cycleLabel: source.cycleLabel,
-    status: source.status,
-    statusLabel: statusLabels[source.status],
+    status,
+    statusLabel: statusLabels[status],
     applicationStartDate: source.applicationStartDate,
     applicationEndDate: source.applicationEndDate,
     resultDate: source.resultDate,

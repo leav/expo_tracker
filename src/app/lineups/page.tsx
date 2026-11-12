@@ -1,15 +1,15 @@
-import { connection } from "next/server";
+"use client";
+
 import { listLineups } from "../../domain/lineups";
 import { todayInLosAngeles } from "../../domain/status";
-import { openDatabase } from "../../db";
+import { useReadyWorkspace } from "../workspace-provider";
 import { LineupsBoard } from "./lineups-board";
 
-export const instant = false;
-
-export default async function LineupsPage() {
-  await connection();
+export default function LineupsPage() {
+  const workspace = useReadyWorkspace();
+  if (!workspace) return null;
   const today = todayInLosAngeles();
-  const board = listLineups(openDatabase(), today);
+  const board = listLineups(workspace.db, today);
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
@@ -21,7 +21,7 @@ export default async function LineupsPage() {
       </header>
 
       {board.total === 0 ? (
-        <p className="text-muted-foreground">No active editions. Add a convention or import the sheet.</p>
+        <p className="text-muted-foreground">No active editions. Add a convention on Expos.</p>
       ) : null}
 
       <LineupsBoard board={board} today={today} />

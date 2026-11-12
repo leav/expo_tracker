@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ThemeToggle } from "../components/theme-toggle";
+import { DataMenu } from "./data-menu";
 
 const primary = [
   { href: "/", label: "Expos" },
@@ -22,6 +23,7 @@ export function AppNav() {
               </Link>
             ))}
           </nav>
+          <DataMenu />
           <ThemeToggle />
         </div>
       </div>
