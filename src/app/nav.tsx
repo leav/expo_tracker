@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { ThemeToggle } from "../components/theme-toggle";
-import { DataMenu } from "./data-menu";
 
 const primary = [
   { href: "/", label: "Expos" },
   { href: "/lineups", label: "Lineups" },
   { href: "/calendar", label: "Calendar" },
+  { href: "/data", label: "Data" },
 ] as const;
 
 export function AppNav() {
@@ -23,7 +23,6 @@ export function AppNav() {
               </Link>
             ))}
           </nav>
-          <DataMenu />
           <ThemeToggle />
         </div>
       </div>

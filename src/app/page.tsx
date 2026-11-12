@@ -85,7 +85,7 @@ function HomePage() {
       {conventions === 0 ? (
         <p className="text-muted-foreground">
           No expos yet. Add one here and give it an edition such as 2027. This app saves on this device only — use
-          Data in the header to export a backup.
+          Data to export a backup.
         </p>
       ) : null}
 

@@ -8,7 +8,7 @@ The design, module map, and implementation notes are in [docs/DESIGN.md](docs/DE
 
 Open the [GitHub Pages URL](https://leav.github.io/expo_tracker/) for this repository. Nothing to install.
 
-The first visit is an empty workspace. Add expos from the home page. Use **Data** in the header to **Export backup** (a `.sqlite` file) or **Import backup**. Switching computers, browsers, or clearing site data will lose the workspace unless you import a backup.
+The first visit is an empty workspace. Add expos from the home page. Use **Data** to export JSON or import a JSON package. Switching computers, browsers, or clearing site data will lose the workspace unless you import a backup. Uncheck **Include application status** before sharing a file with someone else.
 
 ## For contributors
 
@@ -23,9 +23,9 @@ The UI listens on [http://127.0.0.1:4747](http://127.0.0.1:4747). The first laun
 
 `pnpm test` runs unit tests. `pnpm build` writes a static site to `out/`. `pnpm start` serves that folder on the same host and port.
 
-To move an existing desktop `vendor.sqlite` into the browser app, open **Data → Import backup** and choose the file.
+To move an existing desktop `vendor.sqlite` into the browser app, open **Data**, choose the file under Import, review the added/updated/removed summary, then **Commit import**.
 
-**Data → Remove mock rows** deletes conventions whose names start with `[MOCK]` (also `MOCK:` / `MOCK -`) and leftover editions whose cycle labels start with `mock-`. Use that before and after browser verification so test rows never mix with real data.
+Browser verification should name test conventions with a `[MOCK]` prefix and edition cycles with a `mock-` prefix. Delete those expos from each convention’s detail page before and after a run so test rows never mix with real data.
 
 Enable GitHub Pages (Source: GitHub Actions) so pushes to `main` publish `out/`.
 

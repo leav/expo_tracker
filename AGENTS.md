@@ -12,7 +12,7 @@ Browser and manual checks run against the in-browser workspace (IndexedDB). Do n
 
 - Name every test convention with a `[MOCK]` prefix, for example `[MOCK] Calendar Con`.
 - Name every test edition cycle with a `mock-` prefix, for example `mock-2027`.
-- Use **Data → Remove mock rows** before and after browser verification so aborted runs do not leave mock rows behind.
+- Delete each `[MOCK]` expo from its convention detail page before and after browser verification so aborted runs do not leave mock rows behind.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

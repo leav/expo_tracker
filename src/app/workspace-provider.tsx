@@ -13,7 +13,13 @@ import {
 import { loadSqlJsBrowser } from "../db/engine-browser";
 import { copySqliteBytes, idbGet, idbSet } from "../db/idb";
 import { createWorkspace, isSqliteBytes, type Workspace } from "../db/workspace";
-import type { TrackerDb } from "../domain/db";
+import { dataFileFromBytes, type DataFile } from "../domain/dataFile";
+import type { DomainResult, TrackerDb } from "../domain/db";
+
+type ImportDocument = {
+  document: DataFile;
+  source: "json" | "sqlite";
+};
 
 type ReadyWorkspace = {
   status: "ready";
@@ -21,8 +27,7 @@ type ReadyWorkspace = {
   persist: () => Promise<void>;
   revision: number;
   persistOk: boolean;
-  exportBytes: () => Uint8Array;
-  replaceWorkspace: (bytes: Uint8Array) => Promise<void>;
+  readImportBytes: (bytes: Uint8Array) => DomainResult<ImportDocument>;
 };
 
 type WorkspaceState =
@@ -59,6 +64,12 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const readImportBytes = useCallback((bytes: Uint8Array): DomainResult<ImportDocument> => {
+    const SQL = sqlRef.current;
+    if (!SQL) return { ok: false, error: "The workspace engine is not ready." };
+    return dataFileFromBytes(SQL, bytes);
+  }, []);
+
   const boot = useCallback(async () => {
     try {
       const SQL = await loadSqlJsBrowser();
@@ -81,8 +92,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
         persist,
         revision: 0,
         persistOk: persistOkRef.current,
-        exportBytes: () => copySqliteBytes(workspace.sqlite.export()),
-        replaceWorkspace: async () => undefined,
+        readImportBytes,
       });
     } catch (cause) {
       setState({
@@ -90,30 +100,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
         message: cause instanceof Error ? cause.message : "Could not open the workspace.",
       });
     }
-  }, [persist]);
-
-  const replaceWorkspace = useCallback(
-    async (bytes: Uint8Array) => {
-      const SQL = sqlRef.current;
-      if (!SQL) throw new Error("The workspace engine is not ready.");
-      if (!isSqliteBytes(bytes)) throw new Error("That file is not a SQLite database.");
-      workspaceRef.current?.sqlite.close();
-      const workspace = createWorkspace(SQL, bytes);
-      workspaceRef.current = workspace;
-      persistOkRef.current = true;
-      await persist();
-      setState({
-        status: "ready",
-        db: workspace.db,
-        persist,
-        revision: Date.now(),
-        persistOk: persistOkRef.current,
-        exportBytes: () => copySqliteBytes(workspace.sqlite.export()),
-        replaceWorkspace: async () => undefined,
-      });
-    },
-    [persist],
-  );
+  }, [persist, readImportBytes]);
 
   useEffect(() => {
     void boot();
@@ -144,14 +131,9 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
           current.status === "ready" ? { ...current, persistOk: persistOkRef.current } : current,
         );
       },
-      replaceWorkspace,
-      exportBytes: () => {
-        const workspace = workspaceRef.current;
-        if (!workspace) throw new Error("The workspace is not ready.");
-        return copySqliteBytes(workspace.sqlite.export());
-      },
+      readImportBytes,
     };
-  }, [persist, replaceWorkspace, state]);
+  }, [persist, readImportBytes, state]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
@@ -161,7 +143,7 @@ export function PersistBanner() {
   if (!workspace || workspace.persistOk) return null;
   return (
     <p className="border-b bg-destructive/10 px-4 py-2 text-center text-sm text-destructive sm:px-6">
-      This browser blocked saving. Export a backup from Data before you close the tab.
+      This browser blocked saving. Export from Data before you close the tab.
     </p>
   );
 }

@@ -20,7 +20,7 @@ Expo Tracker is a local-first, single-user web app for managing artist-alley app
 | `pnpm start` | Serves `out/` on `http://127.0.0.1:4747`. |
 
 - **Stack:** TypeScript, Next.js App Router (static export), Tailwind CSS, shadcn/ui, `@dnd-kit`, Drizzle ORM, and sql.js.
-- **Persistence:** IndexedDB (`expo-tracker` / `sqlite` / `vendor`) holds exported SQLite bytes. `drizzle/` SQL migrations are bundled into the client and applied on open and on backup import. Export/Import/Remove mock rows live in the header **Data** menu.
+- **Persistence:** IndexedDB (`expo-tracker` / `sqlite` / `vendor`) holds exported SQLite bytes. `drizzle/` SQL migrations are bundled into the client and applied on open. **Data** (`/data`) exports pretty-printed JSON and imports JSON or a `.sqlite` file (opened in a throwaway sql.js workspace, migrated, then converted to the same JSON document). Import previews added/updated/removed expos, then commits a merge or a replace.
 
 ```mermaid
 flowchart LR
@@ -29,6 +29,7 @@ flowchart LR
     detail["/cons?id= Detail"]
     lineups["/lineups Board"]
     calendar["/calendar Year Grid"]
+    dataPage["/data Export Import"]
   end
 
   subgraph domainLayer [Pure Domain Layer]
@@ -42,6 +43,7 @@ flowchart LR
   detail --> domain
   lineups --> domain
   calendar --> domain
+  dataPage --> domain
   domain --> sqljs
   sqljs -->|"export after writes"| idb
   idb -->|"load on boot"| sqljs
@@ -52,10 +54,10 @@ flowchart LR
 | Module | Responsibility |
 | --- | --- |
 | `src/db` | sql.js workspace wrapper, IndexedDB helpers, SQLite schema (`src/db/schema.ts`), bundled Drizzle migrations, and in-memory test opener. |
-| `src/domain` | Pure domain logic: conventions, editions, aliases, name normalization, status rules, Expos sorting, Lineups board & drag rules, Calendar markers, `.ics` and Google Calendar builders, and mock cleanup. |
+| `src/domain` | Pure domain logic: conventions, editions, aliases, name normalization, status rules, Expos sorting, Lineups board & drag rules, Calendar markers, `.ics` and Google Calendar builders, JSON data files, and mock cleanup. |
 | `src/components` | Shared UI components (`convention-title.tsx`, `edition-date-fields.tsx`, `interest-gauge.tsx`, `confirm-form.tsx`, `theme-toggle.tsx`, `theme-script.tsx`). |
 | `src/lib` | Theme preference, convention URLs, and `.ics` download helper. |
-| `src/app` | Static Next.js App Router pages, `DatabaseProvider`, client mutations, and the Data menu. |
+| `src/app` | Static Next.js App Router pages, `DatabaseProvider`, and client mutations. |
 
 ## Data Model
 
@@ -177,7 +179,7 @@ stateDiagram-v2
 
 ## Views & Routes
 
-Top navigation links **Expos**, **Lineups**, and **Calendar**, alongside a **Data** menu and a **System / Light / Dark** theme toggle persisted in `localStorage` (`expo-tracker-theme`).
+Top navigation links **Expos**, **Lineups**, **Calendar**, and **Data**, alongside a **System / Light / Dark** theme toggle persisted in `localStorage` (`expo-tracker-theme`).
 
 | Route | Purpose |
 | --- | --- |
@@ -185,6 +187,7 @@ Top navigation links **Expos**, **Lineups**, and **Calendar**, alongside a **Dat
 | `/cons?id=` | **Convention detail:** Interest gauge, **My interest**, convention metadata & delete, aliases, and editions ordered by `cycle_label`. (`/series?id=` redirects here.) |
 | `/lineups` | **Lineups board:** Five-column drag-and-drop status board ordered by each column's action date. |
 | `/calendar` | **Calendar grid:** Read-only 12-month year view of application opens and event starts for interested conventions. |
+| `/data` | **Data:** JSON export and JSON-or-SQLite import with a preview/commit step. |
 
 ### Expos (`/`)
 
@@ -220,10 +223,24 @@ Displays editions in `waiting_to_apply`, `open`, `submitted`, `waitlisted`, and 
   - `.ics` files are generated in the browser and contain one all-day `VEVENT` in `America/Los_Angeles` with two `DISPLAY` `VALARM`s: 1 day before (`-P1D`) and 09:00 on the event day (`PT9H`).
   - **Google Calendar** links open `https://calendar.google.com/calendar/render?action=TEMPLATE...` in a new tab.
 
+### Data (`/data`)
+
+Export writes pretty-printed JSON (`expo-tracker-YYYY-MM-DD.json`, date in the browser’s local timezone). The document has `format: "expo-tracker"`, `version: 1`, and a nested `conventions` list keyed by series name (no database ids). Empty fields are omitted. Edition dates inside the file stay `YYYY-MM-DD` in `America/Los_Angeles`.
+
+- **Include application status** (default on): when off, omit `status`, `submittedAt`, `resultDate`, `paid`, `interest`, and notes so a shared file cannot overwrite someone else’s application on merge.
+- **Export all N expos** (default on): when off, show every expo sorted by name, all unselected, and the user opts in. Download is disabled until at least one expo is selected.
+
+Import accepts `.json`, `.sqlite`, and `.db`. SQLite files are opened in a throwaway sql.js workspace (migrations apply), converted with application status included, then previewed against the live workspace. Commit does not swap the live database until the owner confirms.
+
+- Match an incoming expo to a local row when its `name` or an alias shares a `normalized` key.
+- **Merge** (replace off, default): insert new expos and cycles; overwrite fields that are present in the JSON; leave omitted fields (including status when the file has none) unchanged; add missing aliases and skip collisions with a warning; replace an edition’s links only when `links` is present. Delete nothing. Removed count is 0.
+- **Replace** (replace on): same writes, plus delete local expos that have no match in the file. Confirm before commit.
+- Preview counts **expos**: added, updated, removed. A new edition on an existing expo counts as that expo updated.
+
 ## Testing & Verification
 
 - **Unit tests (`pnpm test`):** Exercise domain logic against in-memory sql.js databases.
 - **Browser verification:** Manual and browser checks run against the in-browser IndexedDB workspace. Never create, edit, drag, or delete real (non-mock) conventions or editions:
   - Prefix test conventions with `[MOCK]` (e.g., `[MOCK] Calendar Con`).
   - Prefix test edition cycles with `mock-` (e.g., `mock-2027`).
-  - Use **Data → Remove mock rows** before and after browser verification to purge mock rows via `cleanMockData` (`src/domain/mock.ts`).
+  - Delete each `[MOCK]` expo from its convention detail page before and after browser verification so aborted runs do not leave mock rows behind. `cleanMockData` (`src/domain/mock.ts`) remains for unit tests.
