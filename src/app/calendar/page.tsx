@@ -3,6 +3,8 @@ import { connection } from "next/server";
 import {
   buildMonthCells,
   canShiftYear,
+  cellAttentionTitle,
+  cellAttentions,
   formatMonthLabel,
   formatYearLabel,
   listScheduleMarkers,
@@ -10,6 +12,7 @@ import {
   parseYear,
   shiftYear,
   yearMonths,
+  type ScheduleAttention,
   type ScheduleKind,
   type ScheduleMarker,
 } from "../../domain/schedule";
@@ -21,11 +24,45 @@ export const instant = false;
 
 const weekdayLabels = ["S", "M", "T", "W", "T", "F", "S"] as const;
 
+const attentionEmoji: Record<ScheduleAttention, string> = {
+  apply: "⚠️",
+  travel: "✈️",
+};
+
 function chipClass(kind: ScheduleKind): string {
   if (kind === "application_start") {
     return "border-amber-300 bg-amber-100 text-amber-950 hover:border-amber-500 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100 dark:hover:border-amber-400";
   }
   return "border-emerald-300 bg-emerald-100 text-emerald-950 hover:border-emerald-500 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100 dark:hover:border-emerald-400";
+}
+
+function cellClass(attentions: ScheduleAttention[], isPast: boolean, isToday: boolean): string {
+  const hasApply = attentions.includes("apply");
+  const hasTravel = attentions.includes("travel");
+  const fade = isPast && !isToday && attentions.length === 0 ? "opacity-55" : "";
+  let ring = "";
+  if (isToday) {
+    ring = "ring-2 ring-inset ring-foreground";
+  } else if (hasTravel) {
+    ring = "ring-2 ring-inset ring-sky-400";
+  } else if (hasApply) {
+    ring = "ring-2 ring-inset ring-orange-500";
+  }
+  return `flex min-h-14 flex-col gap-0.5 bg-card p-0.5 ${fade} ${ring}`;
+}
+
+function dayNumberClass(attentions: ScheduleAttention[], isToday: boolean): string {
+  const base = "inline-flex h-4 w-4 shrink-0 items-center justify-center leading-none";
+  if (isToday) {
+    return `${base} rounded-full bg-foreground text-[9px] font-semibold text-background`;
+  }
+  if (attentions.includes("apply")) {
+    return `${base} font-semibold text-orange-600 dark:text-orange-400`;
+  }
+  if (attentions.includes("travel")) {
+    return `${base} font-semibold text-sky-600 dark:text-sky-400`;
+  }
+  return `${base} text-muted-foreground`;
 }
 
 function navButtonClass(disabled: boolean): string {
@@ -73,6 +110,7 @@ export default async function CalendarPage({
           <p className="text-sm text-muted-foreground">
             Application opens and event starts for conventions with interest above zero.
           </p>
+          <p className="text-sm text-muted-foreground">⚠️ waiting or ready to apply · ✈️ approved</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {previousDisabled ? (
@@ -167,24 +205,27 @@ function MonthCard({
             return <div key={`empty-${yearMonth}-${index}`} className="min-h-14 bg-muted/40" />;
           }
           const dayMarkers = byDay.get(cell.date) ?? [];
+          const attentions = cellAttentions(dayMarkers);
+          const reminder = cellAttentionTitle(dayMarkers);
           const isPast = cell.date < today;
           const isToday = cell.date === today;
           return (
             <div
               key={cell.date}
-              className={`flex min-h-14 flex-col gap-0.5 bg-card p-0.5 ${isPast && !isToday ? "opacity-55" : ""} ${
-                isToday ? "ring-2 ring-inset ring-foreground" : ""
-              }`}
+              className={cellClass(attentions, isPast, isToday)}
+              title={reminder ?? undefined}
+              aria-label={reminder ?? undefined}
             >
-              <span
-                className={`inline-flex h-4 w-4 items-center justify-center leading-none ${
-                  isToday
-                    ? "rounded-full bg-foreground text-[9px] font-semibold text-background"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {cell.day}
-              </span>
+              <div className="flex h-4 min-w-0 items-center gap-0.5">
+                <span className={dayNumberClass(attentions, isToday)}>
+                  {cell.day}
+                </span>
+                {attentions.map((attention) => (
+                  <span key={attention} className="leading-none" aria-hidden="true">
+                    {attentionEmoji[attention]}
+                  </span>
+                ))}
+              </div>
               <div className="flex flex-col gap-0.5">
                 {dayMarkers.map((marker) => {
                   const title = `${marker.conventionName} ${marker.cycleLabel} · ${marker.kindLabel}`;

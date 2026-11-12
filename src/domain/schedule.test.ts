@@ -3,7 +3,11 @@ import { describe, it } from "node:test";
 import {
   buildMonthCells,
   canShiftYear,
+  cellAttentionTitle,
+  cellAttentions,
   firstWeekdaySunday,
+  joinDisplayNames,
+  markerAttention,
   markersForMonth,
   parseYear,
   scheduleMarkersFromRows,
@@ -41,10 +45,20 @@ describe("scheduleMarkersFromRows", () => {
       }),
     ]);
     assert.deepEqual(
-      markers.map((marker) => ({ date: marker.date, kind: marker.kind, kindLabel: marker.kindLabel })),
+      markers.map((marker) => ({
+        date: marker.date,
+        kind: marker.kind,
+        kindLabel: marker.kindLabel,
+        status: marker.status,
+      })),
       [
-        { date: "2026-11-08", kind: "application_start", kindLabel: "Application opens" },
-        { date: "2027-05-22", kind: "event_start", kindLabel: "Starts" },
+        {
+          date: "2026-11-08",
+          kind: "application_start",
+          kindLabel: "Application opens",
+          status: "waiting_to_apply",
+        },
+        { date: "2027-05-22", kind: "event_start", kindLabel: "Starts", status: "waiting_to_apply" },
       ],
     );
   });
@@ -185,6 +199,197 @@ describe("scheduleMarkersFromRows", () => {
         { date: "2026-01-01", kind: "application_start" },
         { date: "2027-06-01", kind: "event_start" },
       ],
+    );
+  });
+});
+
+describe("schedule attention", () => {
+  it("flags waiting and open application starts as apply", () => {
+    assert.equal(markerAttention("application_start", "waiting_to_apply"), "apply");
+    assert.equal(markerAttention("application_start", "open"), "apply");
+    assert.equal(markerAttention("application_start", "submitted"), null);
+    assert.equal(markerAttention("application_start", "approved"), null);
+    assert.equal(markerAttention("application_start", "unknown"), null);
+  });
+
+  it("flags approved event starts as travel", () => {
+    assert.equal(markerAttention("event_start", "approved"), "travel");
+    assert.equal(markerAttention("event_start", "waitlisted"), null);
+    assert.equal(markerAttention("event_start", "attended"), null);
+    assert.equal(markerAttention("event_start", "waiting_to_apply"), null);
+    assert.equal(markerAttention("event_start", "open"), null);
+  });
+
+  it("unique-sorts apply then travel for a mixed day", () => {
+    const markers = scheduleMarkersFromRows([
+      convention({
+        id: 1,
+        displayName: "Wait Con",
+        editions: [
+          {
+            id: 1,
+            cycleLabel: "2027",
+            status: "waiting_to_apply",
+            applicationStartDate: "2027-03-15",
+            startDate: "2027-08-01",
+          },
+        ],
+      }),
+      convention({
+        id: 2,
+        displayName: "Open Con",
+        editions: [
+          {
+            id: 2,
+            cycleLabel: "2027",
+            status: "open",
+            applicationStartDate: "2027-03-15",
+            startDate: null,
+          },
+        ],
+      }),
+      convention({
+        id: 3,
+        displayName: "Approved Con",
+        editions: [
+          {
+            id: 3,
+            cycleLabel: "2027",
+            status: "approved",
+            applicationStartDate: "2026-01-01",
+            startDate: "2027-03-15",
+          },
+        ],
+      }),
+      convention({
+        id: 4,
+        displayName: "Submitted Con",
+        editions: [
+          {
+            id: 4,
+            cycleLabel: "2027",
+            status: "submitted",
+            applicationStartDate: "2027-03-15",
+            startDate: "2027-09-01",
+          },
+        ],
+      }),
+    ]);
+    const sameDay = markers.filter((marker) => marker.date === "2027-03-15");
+    assert.deepEqual(cellAttentions(sameDay), ["apply", "travel"]);
+  });
+
+  it("collapses duplicate apply badges and leaves control statuses empty", () => {
+    const markers = scheduleMarkersFromRows([
+      convention({
+        id: 1,
+        displayName: "Open A",
+        editions: [
+          {
+            id: 1,
+            cycleLabel: "2027",
+            status: "open",
+            applicationStartDate: "2027-04-01",
+            startDate: null,
+          },
+        ],
+      }),
+      convention({
+        id: 2,
+        displayName: "Open B",
+        editions: [
+          {
+            id: 2,
+            cycleLabel: "2027",
+            status: "open",
+            applicationStartDate: "2027-04-01",
+            startDate: null,
+          },
+        ],
+      }),
+      convention({
+        id: 3,
+        displayName: "Waitlisted Con",
+        editions: [
+          {
+            id: 3,
+            cycleLabel: "2027",
+            status: "waitlisted",
+            applicationStartDate: "2027-04-01",
+            startDate: "2027-04-01",
+          },
+        ],
+      }),
+    ]);
+    const sameDay = markers.filter((marker) => marker.date === "2027-04-01");
+    assert.deepEqual(cellAttentions(sameDay), ["apply"]);
+    assert.deepEqual(
+      cellAttentions([{ kind: "event_start", status: "attended" }]),
+      [],
+    );
+  });
+
+  it("joins one, two, and three display names", () => {
+    assert.equal(joinDisplayNames([]), "");
+    assert.equal(joinDisplayNames(["FanimeCon 2027"]), "FanimeCon 2027");
+    assert.equal(joinDisplayNames(["FanimeCon 2027", "SacAnime 2027"]), "FanimeCon 2027 and SacAnime 2027");
+    assert.equal(
+      joinDisplayNames(["Alpha 2027", "Beta 2027", "Gamma 2027"]),
+      "Alpha 2027, Beta 2027, and Gamma 2027",
+    );
+  });
+
+  it("builds apply, travel, mixed, and empty cell reminder titles", () => {
+    assert.equal(cellAttentionTitle([]), null);
+    assert.equal(
+      cellAttentionTitle([
+        {
+          kind: "application_start",
+          status: "waiting_to_apply",
+          conventionName: "FanimeCon",
+          cycleLabel: "2027",
+        },
+      ]),
+      "Remember to apply for FanimeCon 2027!",
+    );
+    assert.equal(
+      cellAttentionTitle([
+        {
+          kind: "event_start",
+          status: "approved",
+          conventionName: "FanimeCon",
+          cycleLabel: "2027",
+        },
+      ]),
+      "Remember to vend at FanimeCon 2027!",
+    );
+    assert.equal(
+      cellAttentionTitle([
+        {
+          kind: "application_start",
+          status: "open",
+          conventionName: "Wait Con",
+          cycleLabel: "2027",
+        },
+        {
+          kind: "event_start",
+          status: "approved",
+          conventionName: "Go Con",
+          cycleLabel: "2027",
+        },
+      ]),
+      "Remember to apply for Wait Con 2027! Remember to vend at Go Con 2027!",
+    );
+    assert.equal(
+      cellAttentionTitle([
+        {
+          kind: "application_start",
+          status: "submitted",
+          conventionName: "Submitted Con",
+          cycleLabel: "2027",
+        },
+      ]),
+      null,
     );
   });
 });

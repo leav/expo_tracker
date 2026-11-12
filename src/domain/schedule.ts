@@ -2,7 +2,7 @@ import { conventions, editions } from "../db/schema";
 import { conventionInterest, interestGauge, type InterestGauge } from "./cons";
 import { compareCycleLabels } from "./cycles";
 import type { TrackerDb } from "./db";
-import { isStatus } from "./status";
+import { isStatus, type Status } from "./status";
 
 export const scheduleKinds = ["application_start", "event_start"] as const;
 export type ScheduleKind = (typeof scheduleKinds)[number];
@@ -12,6 +12,9 @@ export const scheduleKindLabels: Record<ScheduleKind, string> = {
   event_start: "Starts",
 };
 
+export const scheduleAttentions = ["apply", "travel"] as const;
+export type ScheduleAttention = (typeof scheduleAttentions)[number];
+
 export type ScheduleMarker = {
   date: string;
   kind: ScheduleKind;
@@ -20,6 +23,7 @@ export type ScheduleMarker = {
   conventionName: string;
   cycleLabel: string;
   editionId: number;
+  status: Status;
   gauge: InterestGauge;
 };
 
@@ -42,6 +46,65 @@ const excludedStatuses = new Set(["skipped", "withdrawn"]);
 
 function kindRank(kind: ScheduleKind): number {
   return kind === "application_start" ? 0 : 1;
+}
+
+export function markerAttention(kind: ScheduleKind, status: Status): ScheduleAttention | null {
+  if (kind === "application_start" && (status === "waiting_to_apply" || status === "open")) {
+    return "apply";
+  }
+  if (kind === "event_start" && status === "approved") return "travel";
+  return null;
+}
+
+export function cellAttentions(
+  markers: Pick<ScheduleMarker, "kind" | "status">[],
+): ScheduleAttention[] {
+  const seen = new Set<ScheduleAttention>();
+  for (const marker of markers) {
+    const attention = markerAttention(marker.kind, marker.status);
+    if (attention) seen.add(attention);
+  }
+  return scheduleAttentions.filter((attention) => seen.has(attention));
+}
+
+export function joinDisplayNames(names: string[]): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) return names[0] ?? "";
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+}
+
+type AttentionTitleMarker = Pick<ScheduleMarker, "kind" | "status" | "conventionName" | "cycleLabel">;
+
+function markerDisplayName(marker: AttentionTitleMarker): string {
+  return `${marker.conventionName} ${marker.cycleLabel}`;
+}
+
+export function attentionNames(
+  markers: AttentionTitleMarker[],
+  attention: ScheduleAttention,
+): string[] {
+  const names: string[] = [];
+  const seen = new Set<string>();
+  for (const marker of markers) {
+    if (markerAttention(marker.kind, marker.status) !== attention) continue;
+    const name = markerDisplayName(marker);
+    if (seen.has(name)) continue;
+    seen.add(name);
+    names.push(name);
+  }
+  return names;
+}
+
+export function cellAttentionTitle(markers: AttentionTitleMarker[]): string | null {
+  const parts: string[] = [];
+  for (const attention of scheduleAttentions) {
+    const names = joinDisplayNames(attentionNames(markers, attention));
+    if (!names) continue;
+    if (attention === "apply") parts.push(`Remember to apply for ${names}!`);
+    else parts.push(`Remember to vend at ${names}!`);
+  }
+  return parts.length === 0 ? null : parts.join(" ");
 }
 
 function compareMarkers(a: ScheduleMarker, b: ScheduleMarker): number {
@@ -82,6 +145,7 @@ export function scheduleMarkersFromRows(rows: ScheduleConventionRow[]): Schedule
         conventionName: convention.displayName,
         cycleLabel: edition.cycleLabel,
         editionId: edition.id,
+        status: edition.status,
         gauge,
       };
       pushIfPresent(markers, edition.applicationStartDate, "application_start", base);
