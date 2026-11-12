@@ -340,3 +340,43 @@ describe("0007 ics drop google migration", () => {
     assert.equal(settingColumns.includes("drive_limit_hours"), true);
   });
 });
+
+describe("0008 drop drive, import, and settings", () => {
+  let sqlite: Database.Database;
+
+  before(() => {
+    sqlite = new Database(":memory:");
+    for (const name of [
+      "0000_powerful_lenny_balinger.sql",
+      "0001_import_review.sql",
+      "0002_core_workspace.sql",
+      "0003_city_state_only.sql",
+      "0004_skipped_status.sql",
+      "0005_edition_location_on_con.sql",
+      "0006_calendar_reminders.sql",
+      "0007_ics_drop_google.sql",
+    ]) {
+      sqlite.exec(sqlFile(name));
+    }
+    sqlite.exec(sqlFile("0008_drop_drive_import_settings.sql"));
+  });
+
+  after(() => {
+    sqlite.close();
+  });
+
+  it("drops drive columns, import_proposal, and setting", () => {
+    const tables = (sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
+      (row) => row.name,
+    );
+    assert.equal(tables.includes("import_proposal"), false);
+    assert.equal(tables.includes("setting"), false);
+
+    const conventionColumns = (
+      sqlite.prepare("PRAGMA table_info(convention)").all() as { name: string }[]
+    ).map((row) => row.name);
+    assert.equal(conventionColumns.includes("drive_minutes"), false);
+    assert.equal(conventionColumns.includes("drive_source"), false);
+    assert.equal(conventionColumns.includes("default_region"), true);
+  });
+});

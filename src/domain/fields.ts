@@ -31,20 +31,6 @@ export function parseSignedInteger(value: string | null, label: string): number 
   return Number(value);
 }
 
-export function parseOptionalMinutes(value: string | null, label: string): number | null | { error: string } {
-  if (value === null) return null;
-  if (!/^\d+$/.test(value)) return { error: `${label} must be a whole number of minutes.` };
-  return Number(value);
-}
-
-export function parsePositiveInteger(value: string | null, label: string): number | { error: string } {
-  if (value === null) return { error: `${label} is required.` };
-  if (!/^\d+$/.test(value) || Number(value) < 1) {
-    return { error: `${label} must be a whole number of at least 1.` };
-  }
-  return Number(value);
-}
-
 export function isError<T>(value: T | { error: string }): value is { error: string } {
   return typeof value === "object" && value !== null && "error" in value;
 }

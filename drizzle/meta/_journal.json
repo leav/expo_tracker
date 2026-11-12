@@ -57,6 +57,13 @@
       "when": 1794300000000,
       "tag": "0007_ics_drop_google",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794448887803,
+      "tag": "0008_drop_drive_import_settings",
+      "breakpoints": true
     }
   ]
 }

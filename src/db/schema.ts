@@ -9,8 +9,6 @@ export const conventions = sqliteTable("convention", {
   defaultRegion: text("default_region"),
   estimatedAttendance: integer("estimated_attendance"),
   manualInterest: integer("manual_interest").notNull().default(0),
-  driveMinutes: integer("drive_minutes"),
-  driveSource: text("drive_source"),
   notes: text("notes"),
 });
 
@@ -52,18 +50,4 @@ export const editionLinks = sqliteTable("edition_link", {
     .references(() => editions.id, { onDelete: "cascade" }),
   url: text("url").notNull(),
   kind: text("kind").notNull(),
-});
-
-export const importProposals = sqliteTable("import_proposal", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  kind: text("kind").notNull(),
-  dedupeKey: text("dedupe_key").notNull().unique(),
-  payloadJson: text("payload_json").notNull(),
-  state: text("state").notNull().default("pending"),
-});
-
-export const settings = sqliteTable("setting", {
-  id: integer("id").primaryKey(),
-  timezone: text("timezone").notNull().default("America/Los_Angeles"),
-  driveLimitHours: integer("drive_limit_hours").notNull().default(12),
 });

@@ -78,16 +78,6 @@ export default async function ConsDetailPage({
               name="estimatedAttendance"
               defaultValue={convention.estimatedAttendance?.toString() ?? ""}
             />
-            <Field
-              label="Manual drive minutes"
-              name="driveMinutes"
-              defaultValue={convention.driveSource === "manual" ? (convention.driveMinutes?.toString() ?? "") : ""}
-              placeholder={
-                convention.driveSource === "seed" && convention.driveMinutes != null
-                  ? `Seeded ${convention.driveMinutes}`
-                  : "City estimate"
-              }
-            />
           </div>
           <label className="grid gap-1 text-sm">
             Notes

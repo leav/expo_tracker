@@ -1,8 +1,8 @@
 # Expo Tracker
 
-Local app for tracking artist-alley applications to recurring cons and expos. A convention is a stable series. Each year (or season, or Comiket number) is an edition. Automation only files items that need a decision: an opening date was announced, applications are open, or pasted text accepted, rejected, or waitlisted you. Nothing is written to the board until you approve it.
+Local app for tracking artist-alley applications to recurring cons and expos. A convention is a stable series. Each year (or season, or Comiket number) is an edition.
 
-The design, module map, and implementation milestones are in [docs/DESIGN.md](docs/DESIGN.md). Start at the first milestone marked `not started`.
+The design, module map, and implementation notes are in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Run
 
@@ -15,11 +15,7 @@ pnpm dev
 
 The UI listens on [http://127.0.0.1:4747](http://127.0.0.1:4747). The first launch creates `data/vendor.sqlite`. Later launches reuse that file.
 
-`pnpm worker` runs the same worker loop outside the web server. Collectors are not wired yet.
-
 `pnpm mock:clean` deletes conventions whose names start with `[MOCK]` (also `MOCK:` / `MOCK -`) and any leftover editions whose cycle labels start with `mock-`. Use that before and after browser verification so test rows never mix with real data. Do not edit real conventions or editions while verifying UI milestones.
-
-Copy `.env.example` to `.env.local` when you have optional keys. The app runs without them. The language-model extractor and Discord stay off until their keys are set.
 
 ## Calendar files
 

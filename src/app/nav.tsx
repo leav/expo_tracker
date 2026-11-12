@@ -5,8 +5,6 @@ const primary = [
   { href: "/", label: "Expos" },
   { href: "/lineups", label: "Lineups" },
   { href: "/calendar", label: "Calendar" },
-  { href: "/jobs", label: "Jobs" },
-  { href: "/settings", label: "Settings" },
 ] as const;
 
 export function AppNav() {
@@ -23,9 +21,6 @@ export function AppNav() {
                 {item.label}
               </Link>
             ))}
-            <Link className="text-muted-foreground underline-offset-4 hover:underline" href="/import">
-              Import
-            </Link>
           </nav>
           <ThemeToggle />
         </div>

@@ -4,6 +4,7 @@ import {
   conventionInterest,
   emptyInterestGauge,
   interestGauge,
+  parseConsSort,
   pickAttendanceValue,
   pickRepresentativeEdition,
   shiftInterestGauge,
@@ -26,7 +27,6 @@ function tile(overrides: Partial<ConsTile> & Pick<ConsTile, "conventionId" | "di
     region: null,
     locationLabel: null,
     gauge: emptyInterestGauge,
-    driveMinutes: null,
     startMonth: null,
     hasEditions: true,
     ...overrides,
@@ -145,18 +145,18 @@ describe("representative edition, interest, and cons sorts", () => {
     assert.equal(shiftInterestGauge(gauge, "approved", "attended").summary, "1 submitted, 1 attended");
   });
 
-  it("sorts by gauge count, distance, month, and name with name as the tie-break", () => {
+  it("sorts by gauge count, state, month, and name with name as the tie-break", () => {
     const tiles = [
-      tile({ conventionId: 1, displayName: "Beta", gauge: gaugeWithCount(2), driveMinutes: 400, startMonth: 5 }),
-      tile({ conventionId: 2, displayName: "Alpha", gauge: gaugeWithCount(2), driveMinutes: null, startMonth: null }),
-      tile({ conventionId: 3, displayName: "Gamma", gauge: gaugeWithCount(5), driveMinutes: 60, startMonth: 1 }),
+      tile({ conventionId: 1, displayName: "Beta", gauge: gaugeWithCount(2), region: "CA", startMonth: 5 }),
+      tile({ conventionId: 2, displayName: "Alpha", gauge: gaugeWithCount(2), region: null, startMonth: null }),
+      tile({ conventionId: 3, displayName: "Gamma", gauge: gaugeWithCount(5), region: "AZ", startMonth: 1 }),
     ];
     assert.deepEqual(
       sortCons(tiles, "interest").map((row) => row.displayName),
       ["Gamma", "Alpha", "Beta"],
     );
     assert.deepEqual(
-      sortCons(tiles, "distance").map((row) => row.displayName),
+      sortCons(tiles, "state").map((row) => row.displayName),
       ["Gamma", "Beta", "Alpha"],
     );
     assert.deepEqual(
@@ -167,5 +167,11 @@ describe("representative edition, interest, and cons sorts", () => {
       sortCons(tiles, "name").map((row) => row.displayName),
       ["Alpha", "Beta", "Gamma"],
     );
+  });
+
+  it("defaults expos sort to name and ignores unknown keys", () => {
+    assert.equal(parseConsSort(undefined), "name");
+    assert.equal(parseConsSort("interest"), "interest");
+    assert.equal(parseConsSort("distance"), "name");
   });
 });

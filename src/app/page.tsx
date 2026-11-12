@@ -11,11 +11,11 @@ import { openDatabase } from "../db";
 
 export const instant = false;
 
-const sorts: { key: ConsSortKey; label: string }[] = [
-  { key: "interest", label: "Interest" },
-  { key: "distance", label: "Distance" },
-  { key: "time", label: "Time of year" },
-  { key: "name", label: "Name" },
+const sorts: { key: ConsSortKey; label: string; title: string }[] = [
+  { key: "name", label: "Name", title: "Sort by names" },
+  { key: "interest", label: "Interest", title: "Sort by number of tracked editions" },
+  { key: "time", label: "Time of year", title: "Sort by time of year" },
+  { key: "state", label: "State", title: "Sort by state names" },
 ];
 
 export default async function Home({
@@ -43,7 +43,8 @@ export default async function Home({
           {sorts.map((item) => (
             <Link
               key={item.key}
-              href={item.key === "interest" ? "/" : `/?sort=${item.key}`}
+              href={item.key === "name" ? "/" : `/?sort=${item.key}`}
+              title={item.title}
               className={
                 item.key === sort
                   ? "rounded-md bg-foreground px-2 py-1 text-background"
@@ -62,16 +63,16 @@ export default async function Home({
 
       {conventions === 0 ? (
         <p className="text-muted-foreground">
-          No conventions yet. Import the 摆摊 sheet, or add one here and give it an edition such as 2027.
+          No expos yet. Add one here and give it an edition such as 2027.
         </p>
       ) : null}
 
       <form action={createConventionAction} className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] sm:items-end">
-        <Field label="Convention" name="displayName" required placeholder="FanimeCon" />
+        <Field label="Expo" name="displayName" required placeholder="FanimeCon" />
         <Field label="Website" name="website" placeholder="https://" />
         <Field label="City" name="defaultCity" placeholder="San Jose" />
         <Field label="State" name="defaultRegion" placeholder="CA" />
-        <Button type="submit">Add convention</Button>
+        <Button type="submit">Add expo</Button>
       </form>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

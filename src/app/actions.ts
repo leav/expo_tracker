@@ -16,7 +16,7 @@ import {
   setEditionPaid,
   updateEdition,
 } from "../domain/editions";
-import { blankToNull, isError, parseAttendance, parseOptionalMinutes, parseSignedInteger } from "../domain/fields";
+import { blankToNull, isError, parseAttendance, parseSignedInteger } from "../domain/fields";
 import { listLineups, moveLineupEdition, type LineupBoard } from "../domain/lineups";
 import { isStatus, todayInLosAngeles } from "../domain/status";
 import { openDatabase } from "../db";
@@ -32,8 +32,6 @@ function conventionFromForm(form: FormData): ConventionInput | { error: string }
   if (isError(estimatedAttendance)) return estimatedAttendance;
   const manualInterest = parseSignedInteger(blankToNull(form.get("manualInterest")), "Interest");
   if (isError(manualInterest)) return manualInterest;
-  const driveMinutes = parseOptionalMinutes(blankToNull(form.get("driveMinutes")), "Drive minutes");
-  if (isError(driveMinutes)) return driveMinutes;
   return {
     displayName: String(form.get("displayName") ?? ""),
     website: blankToNull(form.get("website")),
@@ -42,7 +40,6 @@ function conventionFromForm(form: FormData): ConventionInput | { error: string }
     defaultRegion: blankToNull(form.get("defaultRegion")),
     estimatedAttendance,
     manualInterest,
-    driveMinutes,
   };
 }
 

@@ -2,13 +2,12 @@ import { eq } from "drizzle-orm";
 import { conventions, editions } from "../db/schema";
 import { compareCycleLabels } from "./cycles";
 import type { TrackerDb } from "./db";
-import { seedDriveMinutes } from "./driveTime";
 import { locationLabel } from "./location";
 import { editionInterest, isStatus, statusLabels, type Status } from "./status";
 
 export { locationLabel };
 
-export const consSortKeys = ["interest", "distance", "time", "name"] as const;
+export const consSortKeys = ["name", "interest", "time", "state"] as const;
 export type ConsSortKey = (typeof consSortKeys)[number];
 
 export type RepresentativeEdition = {
@@ -96,14 +95,13 @@ export type ConsTile = {
   region: string | null;
   locationLabel: string | null;
   gauge: InterestGauge;
-  driveMinutes: number | null;
   startMonth: number | null;
   hasEditions: boolean;
 };
 
 export function parseConsSort(value: string | null | undefined): ConsSortKey {
   if (value && (consSortKeys as readonly string[]).includes(value)) return value as ConsSortKey;
-  return "interest";
+  return "name";
 }
 
 export function compareCycleLabelsForSort(a: string, b: string): number {
@@ -230,6 +228,11 @@ export function startMonth(startDate: string | null): number | null {
   return month >= 1 && month <= 12 ? month : null;
 }
 
+function regionSortKey(region: string | null): string | null {
+  const trimmed = region?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export function sortCons(tiles: ConsTile[], key: ConsSortKey): ConsTile[] {
   const name = (a: ConsTile, b: ConsTile) => a.displayName.localeCompare(b.displayName, "en", { sensitivity: "base" });
   const sorted = [...tiles];
@@ -237,11 +240,13 @@ export function sortCons(tiles: ConsTile[], key: ConsSortKey): ConsTile[] {
     if (key === "interest") {
       return b.gauge.count - a.gauge.count || name(a, b);
     }
-    if (key === "distance") {
-      if (a.driveMinutes == null && b.driveMinutes == null) return name(a, b);
-      if (a.driveMinutes == null) return 1;
-      if (b.driveMinutes == null) return -1;
-      return a.driveMinutes - b.driveMinutes || name(a, b);
+    if (key === "state") {
+      const aRegion = regionSortKey(a.region);
+      const bRegion = regionSortKey(b.region);
+      if (aRegion == null && bRegion == null) return name(a, b);
+      if (aRegion == null) return 1;
+      if (bRegion == null) return -1;
+      return aRegion.localeCompare(bRegion, "en", { sensitivity: "base" }) || name(a, b);
     }
     if (key === "time") {
       if (a.startMonth == null && b.startMonth == null) return name(a, b);
@@ -281,7 +286,6 @@ export function listCons(db: TrackerDb, sort: ConsSortKey, today: string): ConsT
       region,
       locationLabel: locationLabel(city, region),
       gauge: interestGauge(convention.manualInterest, ownEditions),
-      driveMinutes: convention.driveMinutes ?? seedDriveMinutes(city),
       startMonth: startMonth(representative?.startDate ?? null),
       hasEditions: ownEditions.length > 0,
     };

@@ -1,10 +1,7 @@
 import { eq } from "drizzle-orm";
 import { aliases, conventions } from "../db/schema";
-import { pickAttendanceValue, pickRepresentativeEdition } from "./cons";
 import type { DomainResult, TrackerDb } from "./db";
-import { resolveDriveTime, seedDriveMinutes } from "./driveTime";
 import { normalizeName } from "./names";
-import { todayInLosAngeles } from "./status";
 
 export type ConventionInput = {
   displayName: string;
@@ -14,7 +11,6 @@ export type ConventionInput = {
   defaultRegion?: string | null;
   estimatedAttendance?: number | null;
   manualInterest?: number;
-  driveMinutes?: number | null;
 };
 
 export function createConvention(db: TrackerDb, input: ConventionInput): DomainResult<{ id: number }> {
@@ -24,13 +20,6 @@ export function createConvention(db: TrackerDb, input: ConventionInput): DomainR
   if (!normalized) return { ok: false, error: "That name has nothing left to match on." };
   const taken = nameOwner(db, normalized);
   if (taken) return { ok: false, error: `That name is already used by ${taken}.` };
-
-  const drive = resolveDriveTime({
-    city: input.defaultCity ?? null,
-    currentMinutes: null,
-    currentSource: null,
-    manualMinutes: input.driveMinutes ?? null,
-  });
 
   const inserted = db
     .insert(conventions)
@@ -43,8 +32,6 @@ export function createConvention(db: TrackerDb, input: ConventionInput): DomainR
       defaultRegion: input.defaultRegion ?? null,
       estimatedAttendance: input.estimatedAttendance ?? null,
       manualInterest: input.manualInterest ?? 0,
-      driveMinutes: drive.driveMinutes,
-      driveSource: drive.driveSource,
     })
     .returning({ id: conventions.id })
     .get();
@@ -66,16 +53,6 @@ export function updateConvention(
   const current = db.select().from(conventions).where(eq(conventions.id, input.id)).get();
   if (!current) return { ok: false, error: "That convention is gone." };
 
-  const nextCity = input.defaultCity ?? null;
-  const cityChanged = (current.defaultCity ?? null) !== nextCity;
-  const drive = resolveDriveTime({
-    city: nextCity,
-    currentMinutes: current.driveMinutes,
-    currentSource: current.driveSource,
-    manualMinutes: input.driveMinutes ?? null,
-    cityChanged,
-  });
-
   const updated = db
     .update(conventions)
     .set({
@@ -83,12 +60,10 @@ export function updateConvention(
       normalized,
       website: input.website,
       notes: input.notes,
-      defaultCity: nextCity,
+      defaultCity: input.defaultCity ?? null,
       defaultRegion: input.defaultRegion ?? null,
       estimatedAttendance: input.estimatedAttendance ?? null,
       manualInterest: input.manualInterest ?? 0,
-      driveMinutes: drive.driveMinutes,
-      driveSource: drive.driveSource,
     })
     .where(eq(conventions.id, input.id))
     .returning({ id: conventions.id })
@@ -109,29 +84,6 @@ export function countConventions(db: TrackerDb): number {
   return db.select({ id: conventions.id }).from(conventions).all().length;
 }
 
-export function findConventionByNormalized(db: TrackerDb, normalized: string) {
-  return db.select().from(conventions).where(eq(conventions.normalized, normalized)).get();
-}
-
-export function findNameMatch(
-  db: TrackerDb,
-  normalized: string,
-): { id: number; displayName: string } | null {
-  const convention = findConventionByNormalized(db, normalized);
-  if (convention) return { id: convention.id, displayName: convention.displayName };
-  const alias = db
-    .select({ id: conventions.id, displayName: conventions.displayName })
-    .from(aliases)
-    .innerJoin(conventions, eq(aliases.conventionId, conventions.id))
-    .where(eq(aliases.normalized, normalized))
-    .get();
-  return alias ?? null;
-}
-
-export function listConventions(db: TrackerDb) {
-  return db.select().from(conventions).all();
-}
-
 export function nameOwner(db: TrackerDb, normalized: string, exceptConventionId?: number): string | null {
   const convention = db
     .select({ id: conventions.id, displayName: conventions.displayName })
@@ -149,46 +101,4 @@ export function nameOwner(db: TrackerDb, normalized: string, exceptConventionId?
     .all()
     .find((row) => row.conventionId !== exceptConventionId);
   return alias?.displayName ?? null;
-}
-
-export function fillConventionFromImport(
-  db: TrackerDb,
-  conventionId: number,
-  rows: { startDate: string | null; cycleLabel: string; attendance: number | null; city: string | null }[],
-  today = todayInLosAngeles(),
-): void {
-  const current = db.select().from(conventions).where(eq(conventions.id, conventionId)).get();
-  if (!current) return;
-  const representative = pickRepresentativeEdition(rows, today);
-  const updates: Partial<typeof conventions.$inferInsert> = {};
-  if (!current.defaultCity) {
-    const city = representative?.city ?? rows.find((row) => row.city)?.city ?? null;
-    if (city) updates.defaultCity = city;
-  }
-  if (current.estimatedAttendance == null) {
-    const attendance = pickAttendanceValue(rows, today);
-    if (attendance != null) updates.estimatedAttendance = attendance;
-  }
-  const nextCity = (updates.defaultCity ?? current.defaultCity) as string | null;
-  if (current.driveSource !== "manual" && current.driveMinutes == null) {
-    const seeded = seedDriveMinutes(nextCity);
-    if (seeded != null) {
-      updates.driveMinutes = seeded;
-      updates.driveSource = "seed";
-    }
-  }
-  if (Object.keys(updates).length === 0) return;
-  db.update(conventions).set(updates).where(eq(conventions.id, conventionId)).run();
-}
-
-export function seedEmptyConventionDefaults(db: TrackerDb, conventionId: number): void {
-  const current = db.select().from(conventions).where(eq(conventions.id, conventionId)).get();
-  if (!current) return;
-  if (current.driveSource === "manual" || current.driveMinutes != null) return;
-  const seeded = seedDriveMinutes(current.defaultCity);
-  if (seeded == null) return;
-  db.update(conventions)
-    .set({ driveMinutes: seeded, driveSource: "seed" })
-    .where(eq(conventions.id, conventionId))
-    .run();
 }

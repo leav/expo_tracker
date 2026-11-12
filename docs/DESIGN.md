@@ -6,17 +6,16 @@ Expo Tracker is a local, single-user web app for managing artist-alley applicati
 
 - **Single owner, local-first:** Runs on `127.0.0.1:4747` backed by a local SQLite file (`data/vendor.sqlite`). No accounts, cloud sync, or multi-user auth.
 - **Artist alley only:** Each edition tracks the owner's artist-alley application for one occurrence of a convention series.
-- **Pure domain layer:** View placement, sorting, interest scoring, date auto-fill, status transitions, `.ics` generation, and import heuristics live in pure functions under `src/domain/` and `src/import/` with unit tests. Next.js routes and server actions call those functions.
+- **Pure domain layer:** View placement, sorting, interest scoring, date auto-fill, status transitions, and `.ics` generation live in pure functions under `src/domain/` with unit tests. Next.js routes and server actions call those functions.
 - **Explicit calendar export:** Saving a date never triggers network calls or background calendar writes. When an edition has an application start or event start date, the owner can download a snapshot `.ics` file or open a Google Calendar template link.
-- **Consistent dates and names:** All dates are `YYYY-MM-DD` in `America/Los_Angeles`. Imported display names (including Chinese characters) are preserved while Chinese sheet statuses map to the English status vocabulary.
+- **Consistent dates and names:** All dates are `YYYY-MM-DD` in `America/Los_Angeles`. Display names (including Chinese characters) are preserved.
 
 ## Runtime & Architecture
 
 | Command | Role |
 | --- | --- |
-| `pnpm dev` | Starts the Next.js App Router UI on `http://127.0.0.1:4747` and boots the background worker loop once via `src/instrumentation.ts`. |
-| `pnpm worker` | Runs the standalone worker entry point (`src/worker/index.ts`) for debugging. |
-| `pnpm test` | Runs unit tests across `src/domain/*.test.ts`, `src/import/*.test.ts`, and `src/lib/*.test.ts` using `tsx --test`. |
+| `pnpm dev` | Starts the Next.js App Router UI on `http://127.0.0.1:4747`. |
+| `pnpm test` | Runs unit tests across `src/domain/*.test.ts` and `src/lib/*.test.ts` using `tsx --test`. |
 | `pnpm mock:clean` | Purges `[MOCK]` conventions and `mock-` editions from `data/vendor.sqlite`. |
 
 - **Stack:** TypeScript, Next.js App Router, Tailwind CSS, shadcn/ui, `@dnd-kit`, Drizzle ORM, and `better-sqlite3`.
@@ -24,18 +23,11 @@ Expo Tracker is a local, single-user web app for managing artist-alley applicati
 
 ```mermaid
 flowchart LR
-  subgraph importFlow [One-time Setup]
-    sheet[Google Sheet CSV] --> importer[src/import]
-    importer --> proposals[(import_proposal)]
-  end
-
   subgraph appViews [Next.js UI Routes]
     expos["/ Expos Grid"]
     detail["/cons/[id] Detail"]
     lineups["/lineups Board"]
     calendar["/calendar Year Grid"]
-    importPage["/import Review"]
-    settingsPage["/settings"]
   end
 
   subgraph domainLayer [Pure Domain Layer]
@@ -45,13 +37,10 @@ flowchart LR
 
   db[(SQLite data/vendor.sqlite)]
 
-  importPage --> importer
-  proposals --> db
   expos --> domain
   detail --> domain
   lineups --> domain
   calendar --> domain
-  settingsPage --> domain
   detail --> ics
   domain --> db
 ```
@@ -61,9 +50,7 @@ flowchart LR
 | Module | Responsibility |
 | --- | --- |
 | `src/db` | Drizzle client, automatic migration runner, SQLite schema (`src/db/schema.ts`), and `pnpm mock:clean` CLI (`src/db/clean-mock.ts`). |
-| `src/domain` | Pure domain logic: conventions, editions, aliases, name normalization, status rules, Expos sorting, Lineups board & drag rules, Calendar markers, `.ics` and Google Calendar builders, drive-time seeds, settings, and mock cleanup. |
-| `src/import` | `摆摊` CSV loader/parser, status and date heuristics, and review queue actions for merges, aliases, and unresolved rows. |
-| `src/worker` | Singleton background loop stub (`src/worker/loop.ts`) started by `src/instrumentation.ts` or `pnpm worker`. |
+| `src/domain` | Pure domain logic: conventions, editions, aliases, name normalization, status rules, Expos sorting, Lineups board & drag rules, Calendar markers, `.ics` and Google Calendar builders, and mock cleanup. |
 | `src/components` | Shared UI components (`convention-title.tsx`, `edition-date-fields.tsx`, `interest-gauge.tsx`, `confirm-form.tsx`, `theme-toggle.tsx`, `theme-script.tsx`). |
 | `src/lib` | Theme preference resolution (`src/lib/theme.ts`) and class utilities. |
 | `src/app` | Next.js App Router pages, server actions (`src/app/actions.ts`), and `.ics` download route (`src/app/api/ics/[editionId]/route.ts`). |
@@ -75,7 +62,6 @@ erDiagram
   convention ||--o{ alias : has
   convention ||--o{ edition : holds
   edition ||--o{ edition_link : stores
-  import_proposal }o--o| convention : proposes
 ```
 
 ### `convention`
@@ -90,7 +76,6 @@ Represents a recurring convention series (e.g., FanimeCon).
 | `default_city`, `default_region` | Convention city and state (labeled **City** and **State** in the UI). Location lives only on the convention. |
 | `estimated_attendance` | Expected crowd size at the convention level, or `null` when unknown. |
 | `manual_interest` | Signed integer adjustment (default `0`). |
-| `drive_minutes`, `drive_source` | Estimated drive time from San Mateo, CA in minutes, and its source (`seed` or `manual`). |
 | `notes` | Free text. |
 
 ### `alias`
@@ -119,9 +104,7 @@ One occurrence of a convention series (e.g., cycle `2027`, `2027-winter`, or `10
 
 ### Supporting Tables
 
-- **`edition_link`:** `(id, edition_id, url, kind)` storing classified URLs (`discord`, `gmail`, `google_form`, `eventeny`, `eventhub`, `other`) imported from the sheet. Cascades on edition delete.
-- **`import_proposal`:** `(id, kind, dedupe_key, payload_json, state)` holding `merge`, `alias`, and `unresolved` rows in `pending`, `accepted`, or `dismissed` state for `/import`.
-- **`setting`:** Singleton row (`id = 1`) storing `timezone` (`America/Los_Angeles`) and `drive_limit_hours` (default `12`).
+- **`edition_link`:** `(id, edition_id, url, kind)` storing classified URLs (`discord`, `gmail`, `google_form`, `eventeny`, `eventhub`, `other`). Cascades on edition delete.
 
 ## Domain Rules
 
@@ -190,37 +173,17 @@ stateDiagram-v2
 - **Form date auto-fill (`fillEditionDates`):** In the Add and Edit edition forms, setting `application_start_date` auto-fills an empty `application_end_date` (`+7 days`) and an empty `result_date` (`+1 calendar month`, clamped to month-end). Setting `start_date` auto-fills an empty `end_date` (`+1 day`). Existing dates are never overwritten, and cleared fields stay empty on save.
 - **Status transition auto-fill (`fillStatusDates`):** When an edition transitions to a new status (via `/cons/[id]` or dragging on `/lineups`), moving into `submitted` fills an empty `submitted_at` with today's Los Angeles date, and moving into `approved`, `waitlisted`, or `rejected` fills an empty `result_date` with today's date. Saving without changing status does not refill cleared dates.
 
-### Drive Time Estimation (`src/domain/driveTime.ts`)
-
-Drive time is a city-level estimate in minutes from San Mateo, CA (`seed` or `manual`):
-
-| City | Seeded Hours | Minutes |
-| --- | --- | --- |
-| San Francisco | `0.75` | `45` |
-| San Jose | `1.25` | `75` |
-| Sacramento | `1.75` | `105` |
-| Los Angeles, Pasadena, Long Beach, Anaheim | `6.0` | `360` |
-| San Diego, Las Vegas | `8.5` | `510` |
-| Portland | `10.0` | `600` |
-| Phoenix, Salt Lake City | `13.0` | `780` |
-| Seattle | `13.5` | `810` |
-
-Changing a convention's city refreshes its `seed` drive time from the new city (or clears it if unknown), but never overwrites a `manual` drive-minute override unless a new manual value is provided.
-
 ## Views & Routes
 
-Top navigation links **Expos**, **Lineups**, **Calendar**, **Jobs**, **Settings**, and **Import** (muted setup link), alongside a **System / Light / Dark** theme toggle persisted in `localStorage` (`expo-tracker-theme`).
+Top navigation links **Expos**, **Lineups**, and **Calendar**, alongside a **System / Light / Dark** theme toggle persisted in `localStorage` (`expo-tracker-theme`).
 
 | Route | Purpose |
 | --- | --- |
-| `/` | **Expos grid:** Compact catalog of conventions with add-convention form and four sort modes. |
+| `/` | **Expos grid:** Compact catalog of expos with add-expo form and four sort modes. |
 | `/cons/[id]` | **Convention detail:** Interest gauge, manual interest, convention metadata & delete, aliases, and editions ordered by `cycle_label`. (`/series/[id]` redirects here.) |
 | `/lineups` | **Lineups board:** Five-column drag-and-drop status board ordered by each column's action date. |
 | `/calendar` | **Calendar grid:** Read-only 12-month year view of application opens and event starts for interested conventions. |
 | `/api/ics/[editionId]` | **ICS download:** Returns a single-event `text/calendar` file for `kind=application_start` or `kind=start`. |
-| `/import` | **Sheet import:** Triggers CSV import and resolves pending series merges, unresolved dates/statuses, and alias proposals. |
-| `/settings` | **Settings:** Edits `drive_limit_hours`. |
-| `/jobs` | **Jobs placeholder:** Static informational page. |
 
 ### Expos (`/`)
 
@@ -230,12 +193,12 @@ Each tile summarizes one representative edition for its convention:
 2. Otherwise, most recent past edition with `start_date < today`;
 3. Otherwise, the edition with the greatest `cycle_label` (or **No editions** when none exist).
 
-Equal-date ties break by `cycle_label`. Sorts (with `display_name` ascending as final tie-breaker):
+Equal-date ties break by `cycle_label`. Sort buttons are **Name**, **Interest**, **Time of year**, **State** (hover titles: sort by names / number of tracked editions / time of year / state names). Default is **Name** (`/` with no `?sort=`). Sorts (with `display_name` ascending as final tie-breaker):
 
-- **Interest (`interest`):** Gauge tick count descending.
-- **Distance (`distance`):** `drive_minutes` ascending, unknown values last.
-- **Time of year (`time`):** Summarized `start_date` month (`1..12`) ascending, ignoring year, unknown values last.
 - **Name (`name`):** `display_name` ascending.
+- **Interest (`interest`):** Gauge tick count descending.
+- **Time of year (`time`):** Summarized `start_date` month (`1..12`) ascending, ignoring year, unknown values last.
+- **State (`state`):** `default_region` ascending, unknown values last.
 
 When a convention has a valid HTTP(S) or host-like `website` (`hrefForWebsite`), its title on Expos, Lineups, and the detail header renders as an external link opening in a new tab while the rest of the card links to `/cons/[id]`.
 
@@ -256,31 +219,9 @@ Displays editions in `waiting_to_apply`, `open`, `submitted`, `waitlisted`, and 
   - `.ics` files contain one all-day `VEVENT` in `America/Los_Angeles` with two `DISPLAY` `VALARM`s: 1 day before (`-P1D`) and 09:00 on the event day (`PT9H`).
   - **Google Calendar** links open `https://calendar.google.com/calendar/render?action=TEMPLATE...` in a new tab.
 
-## Sheet Import (`/import`)
-
-Reads `data/sheet.csv` if present on disk, or fetches the public CSV export for sheet `1DBenfdO_Q0WZC5pKcRbgCyC94CCDoEyNK9uoJgElK_Q` (`摆摊`, columns: `名称, 地点, 开展日期, 申请日期, 申请结果, 状态, 预计总人流, 官方网页, 其他连接, 注释`).
-
-### Status & Date Heuristics (`src/import/parse.ts`)
-
-| Sheet `状态` | Mapped `status` | `申请日期` / `申请结果` Handling |
-| --- | --- | --- |
-| `留意中` | `waiting_to_apply` if `申请日期 > today`, else `unknown` | `申请日期` → `application_start_date`. |
-| `已申请` | `submitted` | If `申请结果` present, `申请日期` → `submitted_at` and `申请结果` → `result_date`; otherwise queued as `unresolved_date` if `申请日期` is set. |
-| `Waitlist` | `waitlisted` | Same as `已申请`. |
-| `已通过` | `approved` | Same as `已申请`. |
-| `已拒绝` | `rejected` | Same as `已申请`. |
-| `Pass` | `skipped` | `注释` saved to `notes`; if `申请日期` is set without `申请结果`, queued as `unresolved_date`. |
-| `申请已结束` | `unknown` (queued as `ended_window`) | Extracts `MM/DD - MM/DD` range from `注释` as proposed `application_start_date` and `application_end_date`. |
-
-### Consolidation & Idempotency (`src/import/apply.ts`)
-
-- **Review queue:** Multi-row series that are not yet in the database queue a `merge` proposal (confirming creates one convention and all its editions without adding an alias). Parenthetical names with distinct normalized keys queue `alias` proposals. Ambiguous dates or `申请已结束` rows queue `unresolved` proposals.
-- **Convention fields:** `预计总人流` (stripping commas and trailing `+`, treating `Unknown` as `null`) and `地点` populate the convention's `estimated_attendance` and `default_city` using the representative edition's values first.
-- **Idempotent re-import:** Matched via `edition.sheet_row_key` (or `(convention_id, cycle_label)`), filling only empty fields on existing conventions and editions so owner edits are never overwritten.
-
 ## Testing & Verification
 
-- **Unit tests (`pnpm test`):** Exercise domain and import logic against in-memory SQLite databases.
+- **Unit tests (`pnpm test`):** Exercise domain logic against in-memory SQLite databases.
 - **Browser verification (`data/vendor.sqlite`):** Manual and browser checks run against the local SQLite database. Never create, edit, drag, or delete real conventions or editions:
   - Prefix test conventions with `[MOCK]` (e.g., `[MOCK] Calendar Con`).
   - Prefix test edition cycles with `mock-` (e.g., `mock-2027`).
