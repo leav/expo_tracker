@@ -184,9 +184,9 @@ Top navigation links **Expos**, **Lineups**, **Calendar**, and **Data**, alongsi
 | Route | Purpose |
 | --- | --- |
 | `/` | **Expos grid:** Compact catalog of expos with add-expo form and four sort modes. |
-| `/cons?id=` | **Convention detail:** Interest gauge, **My interest**, convention metadata & delete, aliases, and editions ordered by `cycle_label`. (`/series?id=` redirects here.) |
+| `/cons?id=` | **Expo detail:** Interest gauge, **My interest**, expo metadata & delete, aliases, and editions ordered by `cycle_label`. (`/series?id=` redirects here.) |
 | `/lineups` | **Lineups board:** Five-column drag-and-drop status board ordered by each column's action date. |
-| `/calendar` | **Calendar grid:** Read-only 12-month year view of application opens and event starts for interested conventions. |
+| `/calendar` | **Calendar grid:** Read-only 12-month year view of application opens and event starts for interested expos. |
 | `/data` | **Data:** JSON export and JSON-or-SQLite import with a preview/commit step. |
 
 ### Expos (`/`)
@@ -240,7 +240,7 @@ Import accepts `.json`, `.sqlite`, and `.db`. SQLite files are opened in a throw
 ## Testing & Verification
 
 - **Unit tests (`pnpm test`):** Exercise domain logic against in-memory sql.js databases.
-- **Browser verification:** Manual and browser checks run against the in-browser IndexedDB workspace. Never create, edit, drag, or delete real (non-mock) conventions or editions:
-  - Prefix test conventions with `[MOCK]` (e.g., `[MOCK] Calendar Con`).
+- **Browser verification:** Manual and browser checks run against the in-browser IndexedDB workspace. Never create, edit, drag, or delete real (non-mock) expos or editions:
+  - Prefix test expos with `[MOCK]` (e.g., `[MOCK] Calendar Con`).
   - Prefix test edition cycles with `mock-` (e.g., `mock-2027`).
-  - Delete each `[MOCK]` expo from its convention detail page before and after browser verification so aborted runs do not leave mock rows behind. `cleanMockData` (`src/domain/mock.ts`) remains for unit tests.
+  - Delete each `[MOCK]` expo from its expo detail page before and after browser verification so aborted runs do not leave mock rows behind. `cleanMockData` (`src/domain/mock.ts`) remains for unit tests.

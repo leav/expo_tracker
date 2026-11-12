@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { listLineups } from "../../domain/lineups";
 import { todayInLosAngeles } from "../../domain/status";
 import { useReadyWorkspace } from "../workspace-provider";
@@ -21,7 +22,13 @@ export default function LineupsPage() {
       </header>
 
       {board.total === 0 ? (
-        <p className="text-muted-foreground">No active editions. Add a convention on Expos.</p>
+        <p className="text-muted-foreground">
+          No active editions. Add an expo on{" "}
+          <Link href="/" className="underline underline-offset-4">
+            Expos
+          </Link>
+          .
+        </p>
       ) : null}
 
       <LineupsBoard board={board} today={today} />

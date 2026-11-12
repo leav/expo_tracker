@@ -68,7 +68,7 @@ export function editionInputFromForm(form: FormData, conventionId: number): Edit
 
 export function createEdition(db: TrackerDb, input: EditionInput): DomainResult<{ id: number }> {
   const convention = db.select().from(conventions).where(eq(conventions.id, input.conventionId)).get();
-  if (!convention) return { ok: false, error: "That convention is gone." };
+  if (!convention) return { ok: false, error: "That expo is gone." };
 
   const duplicate = db
     .select({ cycleLabel: editions.cycleLabel })
@@ -76,7 +76,7 @@ export function createEdition(db: TrackerDb, input: EditionInput): DomainResult<
     .where(eq(editions.conventionId, input.conventionId))
     .all()
     .some((row) => row.cycleLabel === input.cycleLabel);
-  if (duplicate) return { ok: false, error: `Cycle ${input.cycleLabel} is already on this convention.` };
+  if (duplicate) return { ok: false, error: `Cycle ${input.cycleLabel} is already on this expo.` };
 
   const status =
     input.inferInitialStatus === false
@@ -122,7 +122,7 @@ export function updateEdition(
     .where(eq(editions.conventionId, input.conventionId))
     .all()
     .find((row) => row.id !== editionId && row.cycleLabel === input.cycleLabel);
-  if (duplicate) return { ok: false, error: `Cycle ${input.cycleLabel} is already on this convention.` };
+  if (duplicate) return { ok: false, error: `Cycle ${input.cycleLabel} is already on this expo.` };
 
   const dates = fillStatusDates({
     fromStatus: current.status,

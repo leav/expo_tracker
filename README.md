@@ -1,6 +1,6 @@
 # Expo Tracker
 
-Local-first app for tracking artist-alley applications to recurring cons and expos. A convention is a stable series. Each year (or season, or Comiket number) is an edition. Data stays in this browser on this device.
+Local-first app for tracking artist-alley applications to recurring cons and expos. An expo is a stable series. Each year (or season, or Comiket number) is an edition. Data stays in this browser on this device.
 
 The design, module map, and implementation notes are in [docs/DESIGN.md](docs/DESIGN.md).
 
@@ -25,7 +25,7 @@ The UI listens on [http://127.0.0.1:4747](http://127.0.0.1:4747). The first laun
 
 To move an existing desktop `vendor.sqlite` into the browser app, open **Data**, choose the file under Import, review the added/updated/removed summary, then **Commit import**.
 
-Browser verification should name test conventions with a `[MOCK]` prefix and edition cycles with a `mock-` prefix. Delete those expos from each convention’s detail page before and after a run so test rows never mix with real data.
+Browser verification should name test expos with a `[MOCK]` prefix and edition cycles with a `mock-` prefix. Delete those expos from each expo’s detail page before and after a run so test rows never mix with real data.
 
 Enable GitHub Pages (Source: GitHub Actions) so pushes to `main` publish `out/`.
 

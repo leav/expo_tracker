@@ -157,14 +157,14 @@ function ConsDetailPage() {
         </form>
         <div className="flex items-center justify-between">
           <Button type="submit" form={`save-convention-${convention.id}`}>
-            Save convention
+            Save expo
           </Button>
           <ConfirmForm
             onSubmit={(event) => void onDeleteConvention(event)}
-            message="Delete this convention and all of its editions?"
+            message="Delete this expo and all of its editions?"
           >
             <input type="hidden" name="conventionId" value={convention.id} />
-            <Button type="submit" size="icon" variant="destructive" aria-label="Delete convention">
+            <Button type="submit" size="icon" variant="destructive" aria-label="Delete expo">
               <Trash2 />
             </Button>
           </ConfirmForm>
@@ -175,7 +175,7 @@ function ConsDetailPage() {
         <h2 className="text-lg font-medium">Aliases</h2>
         {series.aliases.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No aliases. Add a name that does not already match this convention.
+            No aliases. Add a name that does not already match this expo.
           </p>
         ) : (
           <ul className="grid gap-2">
@@ -239,7 +239,7 @@ function ConsDetailPage() {
 function MissingConvention() {
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6 text-sm text-muted-foreground sm:px-6">
-      That convention is gone.
+      That expo is gone.
     </main>
   );
 }

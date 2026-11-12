@@ -390,7 +390,7 @@ function writeConvention(
     existingId == null
       ? null
       : db.select().from(conventions).where(eq(conventions.id, existingId)).get() ?? null;
-  if (existingId != null && !current) return { ok: false, error: "That convention is gone." };
+  if (existingId != null && !current) return { ok: false, error: "That expo is gone." };
 
   const displayName = mergedDisplayName(db, incoming.name, current);
   const saved =
@@ -506,7 +506,7 @@ function replaceLinks(db: TrackerDb, editionId: number, links: DataFileLink[]): 
 }
 
 function parseConvention(raw: unknown, index: number): DomainResult<DataFileConvention> {
-  if (!isRecord(raw)) return { ok: false, error: `Convention ${index + 1} is not an object.` };
+  if (!isRecord(raw)) return { ok: false, error: `Expo ${index + 1} is not an object.` };
   const name = requiredString(raw.name, "name");
   if (!name.ok) return name;
   if (!normalizeName(name.value)) {

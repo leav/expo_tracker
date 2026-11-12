@@ -15,7 +15,7 @@ export type ConventionInput = {
 
 export function createConvention(db: TrackerDb, input: ConventionInput): DomainResult<{ id: number }> {
   const displayName = input.displayName.trim();
-  if (!displayName) return { ok: false, error: "A convention needs a name." };
+  if (!displayName) return { ok: false, error: "An expo needs a name." };
   const normalized = normalizeName(displayName);
   if (!normalized) return { ok: false, error: "That name has nothing left to match on." };
   const taken = nameOwner(db, normalized);
@@ -44,14 +44,14 @@ export function updateConvention(
   input: ConventionInput & { id: number },
 ): DomainResult<{ id: number }> {
   const displayName = input.displayName.trim();
-  if (!displayName) return { ok: false, error: "A convention needs a name." };
+  if (!displayName) return { ok: false, error: "An expo needs a name." };
   const normalized = normalizeName(displayName);
   if (!normalized) return { ok: false, error: "That name has nothing left to match on." };
   const taken = nameOwner(db, normalized, input.id);
   if (taken) return { ok: false, error: `That name is already used by ${taken}.` };
 
   const current = db.select().from(conventions).where(eq(conventions.id, input.id)).get();
-  if (!current) return { ok: false, error: "That convention is gone." };
+  if (!current) return { ok: false, error: "That expo is gone." };
 
   const updated = db
     .update(conventions)
@@ -69,13 +69,13 @@ export function updateConvention(
     .returning({ id: conventions.id })
     .get();
 
-  if (!updated) return { ok: false, error: "That convention is gone." };
+  if (!updated) return { ok: false, error: "That expo is gone." };
   return { ok: true, value: { id: updated.id } };
 }
 
 export function deleteConvention(db: TrackerDb, id: number): DomainResult<{ id: number }> {
   const current = db.select({ id: conventions.id }).from(conventions).where(eq(conventions.id, id)).get();
-  if (!current) return { ok: false, error: "That convention is gone." };
+  if (!current) return { ok: false, error: "That expo is gone." };
   db.delete(conventions).where(eq(conventions.id, id)).run();
   return { ok: true, value: { id } };
 }

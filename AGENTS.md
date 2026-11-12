@@ -8,11 +8,11 @@ UI work is done only after the flow has been exercised in a browser (or, if no b
 
 ### Mock data for browser verification
 
-Browser and manual checks run against the in-browser workspace (IndexedDB). Do not create, edit, drag, or delete real (non-mock) conventions or editions.
+Browser and manual checks run against the in-browser workspace (IndexedDB). Do not create, edit, drag, or delete real (non-mock) expos or editions.
 
-- Name every test convention with a `[MOCK]` prefix, for example `[MOCK] Calendar Con`.
+- Name every test expo with a `[MOCK]` prefix, for example `[MOCK] Calendar Con`.
 - Name every test edition cycle with a `mock-` prefix, for example `mock-2027`.
-- Delete each `[MOCK]` expo from its convention detail page before and after browser verification so aborted runs do not leave mock rows behind.
+- Delete each `[MOCK]` expo from its expo detail page before and after browser verification so aborted runs do not leave mock rows behind.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

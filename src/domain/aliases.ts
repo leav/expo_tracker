@@ -15,7 +15,7 @@ export function addAlias(
     .from(conventions)
     .where(eq(conventions.id, input.conventionId))
     .get();
-  if (!convention) return { ok: false, error: "That convention is gone." };
+  if (!convention) return { ok: false, error: "That expo is gone." };
 
   const normalized = normalizeName(name);
   if (!normalized) return { ok: false, error: "That name has nothing left to match on." };

@@ -116,7 +116,7 @@ describe("delete convention and edition", () => {
   });
 
   it("returns gone errors for missing ids", () => {
-    assert.deepEqual(deleteConvention(db, 999999), { ok: false, error: "That convention is gone." });
+    assert.deepEqual(deleteConvention(db, 999999), { ok: false, error: "That expo is gone." });
     assert.deepEqual(deleteEdition(db, 999999), { ok: false, error: "That edition is gone." });
   });
 });
