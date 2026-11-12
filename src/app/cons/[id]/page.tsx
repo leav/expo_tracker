@@ -45,14 +45,14 @@ export default async function ConsDetailPage({
         <ConventionTitle as="h1" name={convention.displayName} website={convention.website} />
         <InterestGauge gauge={series.gauge} showSummary />
         <label className="flex flex-wrap items-center gap-2 text-sm">
-          Manual interest
+          My interest
           <input
             form={`save-convention-${convention.id}`}
             name="manualInterest"
             type="text"
             inputMode="numeric"
             defaultValue={convention.manualInterest.toString()}
-            aria-label="Manual interest"
+            aria-label="My interest"
             className="h-9 w-16 rounded-md border border-input bg-background px-2 text-center"
           />
         </label>

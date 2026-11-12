@@ -30,7 +30,7 @@ function fail(path: string, result: DomainResult<unknown>): never {
 function conventionFromForm(form: FormData): ConventionInput | { error: string } {
   const estimatedAttendance = parseAttendance(blankToNull(form.get("estimatedAttendance")));
   if (isError(estimatedAttendance)) return estimatedAttendance;
-  const manualInterest = parseSignedInteger(blankToNull(form.get("manualInterest")), "Interest");
+  const manualInterest = parseSignedInteger(blankToNull(form.get("manualInterest")), "My interest");
   if (isError(manualInterest)) return manualInterest;
   return {
     displayName: String(form.get("displayName") ?? ""),

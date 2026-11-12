@@ -146,7 +146,7 @@ When creating a new edition with status `unknown`, if `application_start_date` i
 - **Total interest (calendar filter):** `conventionInterest = manual_interest + sum(editionInterest(edition.status))`. Calendar includes a convention when this value is greater than `0`.
 - **Gauge:** One CSS tick per edition, plus one light-pink tick per positive `manual_interest`. Negative manual interest does not render ticks. Attended ticks are squares; every other status is a rectangle whose height matches the square side and whose width satisfies `side = 2 × width + gap`, so one attended square occupies the same width as two rectangles plus the gap between them. Ticks are grouped left to right: manual (light pink), unknown (hollow), waiting/ready/submitted/waitlisted (yellow), approved (green), attended/withdrawn (blue), rejected (scarlet), skipped (gray). Hover and `aria-label` use a zero-omitting summary such as `3 interest, 1 submitted, 2 attended`. An empty gauge renders nothing.
 - **Expos Interest sort:** Gauge `sortCount` descending (editions + positive manual ticks, including hollow unknown; each attended tick counts as 2), then `display_name`. Expos cards use a neutral `--card` background with no interest tint or score number.
-- **Display:** The gauge sits under the convention name on Expos, Lineups (convention-level), Calendar chips (compact), and `/cons/[id]`. Detail shows the summary in plain text and keeps the manual-interest field.
+- **Display:** The gauge sits under the convention name on Expos, Lineups (convention-level), Calendar chips (compact), and `/cons/[id]`. Detail shows the summary in plain text and keeps the **My interest** field.
 
 ### Date Auto-fill & Status Transitions (`src/domain/editionDates.ts`, `src/domain/statusDates.ts`)
 
@@ -180,7 +180,7 @@ Top navigation links **Expos**, **Lineups**, and **Calendar**, alongside a **Sys
 | Route | Purpose |
 | --- | --- |
 | `/` | **Expos grid:** Compact catalog of expos with add-expo form and four sort modes. |
-| `/cons/[id]` | **Convention detail:** Interest gauge, manual interest, convention metadata & delete, aliases, and editions ordered by `cycle_label`. (`/series/[id]` redirects here.) |
+| `/cons/[id]` | **Convention detail:** Interest gauge, **My interest**, convention metadata & delete, aliases, and editions ordered by `cycle_label`. (`/series/[id]` redirects here.) |
 | `/lineups` | **Lineups board:** Five-column drag-and-drop status board ordered by each column's action date. |
 | `/calendar` | **Calendar grid:** Read-only 12-month year view of application opens and event starts for interested conventions. |
 | `/api/ics/[editionId]` | **ICS download:** Returns a single-event `text/calendar` file for `kind=application_start` or `kind=start`. |
