@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { BackupReminder } from "../components/backup-reminder";
 import { FruitMaskProvider } from "../components/fruit-mask";
+import { GoatCounterScript } from "../components/goatcounter-script";
 import { ThemeScript } from "../components/theme-script";
 import { AppNav } from "./nav";
 import { DatabaseProvider, PersistBanner, WorkspaceReady } from "./workspace-provider";
@@ -36,6 +37,7 @@ export default function RootLayout({
     >
       <head>
         <ThemeScript />
+        {process.env.NODE_ENV === "production" ? <GoatCounterScript /> : null}
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <DatabaseProvider>
