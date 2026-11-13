@@ -1,5 +1,5 @@
 import { conventions, editions } from "../db/schema";
-import { conventionInterest, interestGauge, type InterestGauge } from "./cons";
+import { interestGauge, type InterestGauge } from "./cons";
 import { compareCycleLabels } from "./cycles";
 import type { TrackerDb } from "./db";
 import { isStatus, type Status } from "./status";
@@ -134,8 +134,6 @@ function pushIfPresent(
 export function scheduleMarkersFromRows(rows: ScheduleConventionRow[]): ScheduleMarker[] {
   const markers: ScheduleMarker[] = [];
   for (const convention of rows) {
-    const interest = conventionInterest(convention.manualInterest, convention.editions);
-    if (interest <= 0) continue;
     const gauge = interestGauge(convention.manualInterest, convention.editions);
 
     for (const edition of convention.editions) {

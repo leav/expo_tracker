@@ -27,7 +27,7 @@ function convention(
 }
 
 describe("scheduleMarkersFromRows", () => {
-  it("plots application start and event start for interested conventions", () => {
+  it("plots application start and event start regardless of interest", () => {
     const markers = scheduleMarkersFromRows([
       convention({
         id: 1,
@@ -96,7 +96,7 @@ describe("scheduleMarkersFromRows", () => {
     );
   });
 
-  it("omits zero-interest conventions", () => {
+  it("plots dates for unknown zero-interest conventions", () => {
     const markers = scheduleMarkersFromRows([
       convention({
         id: 1,
@@ -113,7 +113,13 @@ describe("scheduleMarkersFromRows", () => {
         ],
       }),
     ]);
-    assert.equal(markers.length, 0);
+    assert.deepEqual(
+      markers.map((marker) => ({ date: marker.date, kind: marker.kind, status: marker.status })),
+      [
+        { date: "2026-12-01", kind: "application_start", status: "unknown" },
+        { date: "2027-01-01", kind: "event_start", status: "unknown" },
+      ],
+    );
   });
 
   it("includes unknown editions when manual interest makes the series positive", () => {

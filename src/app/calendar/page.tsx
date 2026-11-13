@@ -152,11 +152,11 @@ function CalendarView() {
 
       {!anyMarkers ? (
         <p className="text-muted-foreground">
-          No dates for interested expos. Raise interest on{" "}
+          No dates yet. Add application and event dates on{" "}
           <Link href="/" className="underline underline-offset-4">
             Expos
-          </Link>{" "}
-          or add application and event dates.
+          </Link>
+          .
         </p>
       ) : null}
 
