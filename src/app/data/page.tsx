@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { Fragment, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useFruitMask } from "../../components/fruit-mask";
 import { Button } from "../../components/ui/button";
 import {
@@ -207,9 +207,7 @@ function DataPageBody({
             {source === "sqlite" ? (
               <p className="text-sm text-muted-foreground">This SQLite file includes application status.</p>
             ) : null}
-            <p className="text-sm">
-              {preview.added} added, {preview.updated} updated, {preview.removed} removed
-            </p>
+            <ImportPreviewTable preview={preview} mask={mask} />
             {preview.warnings.length > 0 ? (
               <ul className="grid gap-1 text-sm text-muted-foreground">
                 {preview.warnings.map((warning) => (
@@ -241,5 +239,56 @@ function DataPageBody({
         ) : null}
       </section>
     </main>
+  );
+}
+
+const changeLabels = {
+  added: "Added",
+  modified: "Modified",
+  removed: "Removed",
+} as const;
+
+function ChangeLabel({ change }: { change: keyof typeof changeLabels }) {
+  return <span className="text-xs italic text-muted-foreground">{changeLabels[change]}</span>;
+}
+
+function ImportPreviewTable({
+  preview,
+  mask,
+}: {
+  preview: DataFilePreview;
+  mask: (text: string) => string;
+}) {
+  if (preview.rows.length === 0) return null;
+  return (
+    <fieldset className="w-fit max-w-full rounded-md border bg-muted/40 px-3 pb-2 pt-1">
+      <legend className="px-1 text-xs italic text-muted-foreground">Summary</legend>
+      <div
+        className="grid w-max max-w-full grid-cols-[auto_1px_auto] gap-x-2 text-sm"
+        style={{ gridTemplateRows: `repeat(${preview.rows.length}, auto)` }}
+      >
+        <div className="col-start-2 row-span-full w-px self-stretch bg-muted-foreground/40" />
+        {preview.rows.map((row, index) => (
+          <Fragment key={`${row.expoName}-${index}`}>
+            <div className="col-start-1 py-1">
+              {mask(row.expoName)}
+              {row.expoChange ? (
+                <>
+                  {" "}
+                  <ChangeLabel change={row.expoChange} />
+                </>
+              ) : null}
+            </div>
+            <div className="col-start-3 flex flex-wrap gap-x-2 py-1">
+              {row.editions.map((edition, editionIndex) => (
+                <span key={`${edition.cycle}-${editionIndex}`}>
+                  {edition.cycle} <ChangeLabel change={edition.change} />
+                </span>
+              ))}
+            </div>
+          </Fragment>
+        ))}
+      </div>
+    </fieldset>
   );
 }

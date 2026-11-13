@@ -196,7 +196,19 @@ describe("data file merge and replace", () => {
       const preview = previewDataFile(db, shared, { replace: false });
       assert.equal(preview.ok, true);
       if (!preview.ok) return;
-      assert.deepEqual(preview.value, { added: 0, updated: 1, removed: 0, warnings: [] });
+      assert.deepEqual(preview.value, {
+        added: 0,
+        updated: 1,
+        removed: 0,
+        warnings: [],
+        rows: [
+          {
+            expoName: "FanimeCon",
+            expoChange: null,
+            editions: [{ cycle: "2027", change: "modified" }],
+          },
+        ],
+      });
 
       const applied = applyDataFile(db, shared, { replace: false });
       assert.equal(applied.ok, true);
@@ -230,6 +242,14 @@ describe("data file merge and replace", () => {
       assert.equal(preview.value.added, 1);
       assert.equal(preview.value.updated, 1);
       assert.equal(preview.value.removed, 0);
+      assert.deepEqual(preview.value.rows, [
+        {
+          expoName: "FanimeCon",
+          expoChange: null,
+          editions: [{ cycle: "2028", change: "added" }],
+        },
+        { expoName: "[MOCK] Calendar Con", expoChange: "added", editions: [] },
+      ]);
 
       const applied = applyDataFile(db, doc);
       assert.equal(applied.ok, true);
@@ -266,6 +286,8 @@ describe("data file merge and replace", () => {
       assert.equal(preview.value.added, 0);
       assert.equal(preview.value.updated, 1);
       assert.equal(preview.value.removed, 1);
+      assert.equal(preview.value.rows.at(-1)?.expoName, "SacAnime");
+      assert.equal(preview.value.rows.at(-1)?.expoChange, "removed");
 
       const replaced = applyDataFile(db, onlyFanime, { replace: true });
       assert.equal(replaced.ok, true);

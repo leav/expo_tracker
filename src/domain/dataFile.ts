@@ -53,11 +53,23 @@ export type DataFile = {
   conventions: DataFileConvention[];
 };
 
+export type DataFilePreviewEdition = {
+  cycle: string;
+  change: "added" | "modified";
+};
+
+export type DataFilePreviewRow = {
+  expoName: string;
+  expoChange: "added" | "removed" | null;
+  editions: DataFilePreviewEdition[];
+};
+
 export type DataFilePreview = {
   added: number;
   updated: number;
   removed: number;
   warnings: string[];
+  rows: DataFilePreviewRow[];
 };
 
 export type ExportConvention = {
@@ -170,15 +182,7 @@ export function previewDataFile(
 ): DomainResult<DataFilePreview> {
   const plan = planImport(db, doc, options?.replace === true);
   if (!plan.ok) return plan;
-  return {
-    ok: true,
-    value: {
-      added: plan.value.added.length,
-      updated: plan.value.updated.length,
-      removed: plan.value.removedIds.length,
-      warnings: plan.value.warnings,
-    },
-  };
+  return { ok: true, value: previewFromPlan(db, plan.value) };
 }
 
 export function applyDataFile(
@@ -189,6 +193,7 @@ export function applyDataFile(
   const planned = planImport(db, doc, options?.replace === true);
   if (!planned.ok) return planned;
   const plan = planned.value;
+  const preview = previewFromPlan(db, plan);
 
   for (const id of plan.removedIds) {
     const deleted = deleteConvention(db, id);
@@ -205,27 +210,83 @@ export function applyDataFile(
     if (!written.ok) return written;
   }
 
-  return {
-    ok: true,
-    value: {
-      added: plan.added.length,
-      updated: plan.updated.length,
-      removed: plan.removedIds.length,
-      warnings: plan.warnings,
-    },
-  };
+  return { ok: true, value: preview };
 }
+
+type PlannedExpo =
+  | { kind: "added"; incoming: DataFileConvention }
+  | { kind: "updated"; incoming: DataFileConvention; id: number };
 
 type ImportPlan = {
   added: { incoming: DataFileConvention }[];
   updated: { incoming: DataFileConvention; id: number }[];
+  sequence: PlannedExpo[];
   removedIds: number[];
   warnings: string[];
 };
 
+function previewFromPlan(db: TrackerDb, plan: ImportPlan): DataFilePreview {
+  const rows: DataFilePreviewRow[] = [];
+  for (const item of plan.sequence) {
+    if (item.kind === "added") {
+      rows.push({
+        expoName: item.incoming.name,
+        expoChange: "added",
+        editions: (item.incoming.editions ?? []).map((edition) => ({
+          cycle: edition.cycle,
+          change: "added",
+        })),
+      });
+      continue;
+    }
+    const local = db
+      .select({ displayName: conventions.displayName })
+      .from(conventions)
+      .where(eq(conventions.id, item.id))
+      .get();
+    const existing = new Set(
+      db
+        .select({ cycle: editions.cycleLabel })
+        .from(editions)
+        .where(eq(editions.conventionId, item.id))
+        .all()
+        .map((row) => row.cycle),
+    );
+    rows.push({
+      expoName: local?.displayName ?? item.incoming.name,
+      expoChange: null,
+      editions: (item.incoming.editions ?? []).map((edition) => ({
+        cycle: edition.cycle,
+        change: existing.has(edition.cycle) ? "modified" : "added",
+      })),
+    });
+  }
+  const removed = plan.removedIds
+    .map((id) => {
+      const local = db
+        .select({ displayName: conventions.displayName })
+        .from(conventions)
+        .where(eq(conventions.id, id))
+        .get();
+      return { id, name: local?.displayName ?? `Expo ${id}` };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
+  for (const row of removed) {
+    rows.push({ expoName: row.name, expoChange: "removed", editions: [] });
+  }
+  return {
+    added: plan.added.length,
+    updated: plan.updated.length,
+    removed: plan.removedIds.length,
+    warnings: plan.warnings,
+    rows,
+  };
+}
+
 function planImport(db: TrackerDb, doc: DataFile, replace: boolean): DomainResult<ImportPlan> {
   const added: ImportPlan["added"] = [];
   const updated: ImportPlan["updated"] = [];
+  const sequence: PlannedExpo[] = [];
   const matched = new Set<number>();
   const warnings: string[] = [];
 
@@ -245,9 +306,13 @@ function planImport(db: TrackerDb, doc: DataFile, replace: boolean): DomainResul
         };
       }
       matched.add(match.value);
-      updated.push({ incoming, id: match.value });
+      const item: PlannedExpo = { kind: "updated", incoming, id: match.value };
+      updated.push(item);
+      sequence.push(item);
     } else {
-      added.push({ incoming });
+      const item: PlannedExpo = { kind: "added", incoming };
+      added.push(item);
+      sequence.push(item);
     }
     warnings.push(...aliasWarnings(db, incoming, match.value));
   }
@@ -261,7 +326,7 @@ function planImport(db: TrackerDb, doc: DataFile, replace: boolean): DomainResul
         .map((row) => row.id)
     : [];
 
-  return { ok: true, value: { added, updated, removedIds, warnings } };
+  return { ok: true, value: { added, updated, sequence, removedIds, warnings } };
 }
 
 function matchConvention(db: TrackerDb, incoming: DataFileConvention): DomainResult<number | null> {

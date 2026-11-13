@@ -20,7 +20,7 @@ Expo Tracker is a local-first, single-user web app for managing artist-alley app
 | `pnpm start` | Serves `out/` on `http://127.0.0.1:4747`. |
 
 - **Stack:** TypeScript, Next.js App Router (static export), Tailwind CSS, shadcn/ui, `@dnd-kit`, Drizzle ORM, and sql.js.
-- **Persistence:** IndexedDB (`expo-tracker` / `sqlite` / `vendor`) holds exported SQLite bytes. `drizzle/` SQL migrations are bundled into the client and applied on open. **Data** (`/data`) exports pretty-printed JSON and imports JSON or a `.sqlite` file (opened in a throwaway sql.js workspace, migrated, then converted to the same JSON document). Import previews added/updated/removed expos, then commits a merge or a replace.
+- **Persistence:** IndexedDB (`expo-tracker` / `sqlite` / `vendor`) holds exported SQLite bytes. `drizzle/` SQL migrations are bundled into the client and applied on open. **Data** (`/data`) exports pretty-printed JSON and imports JSON or a `.sqlite` file (opened in a throwaway sql.js workspace, migrated, then converted to the same JSON document). Import previews a table of expos and editions (Added / Modified / Removed), then commits a merge or a replace.
 
 ```mermaid
 flowchart LR
@@ -189,7 +189,7 @@ A backup reminder bar sits under the nav on every page when the workspace has ex
 | `/cons?id=` | **Expo detail:** Interest gauge, **My interest**, expo metadata & delete, aliases, and editions ordered by `cycle_label`. (`/series?id=` redirects here.) |
 | `/lineups` | **Lineups board:** Five-column drag-and-drop status board ordered by each column's action date. |
 | `/calendar` | **Calendar grid:** Read-only 12-month year view of application opens and event starts for interested expos. |
-| `/data` | **Data:** JSON export and JSON-or-SQLite import with a preview/commit step. |
+| `/data` | **Data:** JSON export and JSON-or-SQLite import with a per-expo preview table, then commit. |
 
 ### Expos (`/`)
 
@@ -237,7 +237,7 @@ Import accepts `.json`, `.sqlite`, and `.db`. SQLite files are opened in a throw
 - Match an incoming expo to a local row when its `name` or an alias shares a `normalized` key.
 - **Merge** (replace off, default): insert new expos and cycles; overwrite fields that are present in the JSON; leave omitted fields (including status when the file has none) unchanged; add missing aliases and skip collisions with a warning; replace an edition’s links only when `links` is present. Delete nothing. Removed count is 0.
 - **Replace** (replace on): same writes, plus delete local expos that have no match in the file. Confirm before commit.
-- Preview counts **expos**: added, updated, removed. A new edition on an existing expo counts as that expo updated.
+- Preview is a compact **Summary** fieldset (legend on the top border) holding a two-column grid that hugs its content, with a single muted vertical rule between the name column and the cycles column. One row per expo in the file, then Removed expos when replace is on. Left: expo name, with **Added** only for a new expo and **Removed** for an expo that would be deleted. Right: space-separated cycles (no commas), each with **Added** (new cycle) or **Modified** (cycle already exists). Action words are italic muted labels, not part of the name. A new edition on an existing expo is that unlabeled expo plus an Added cycle.
 
 ## Testing & Verification
 
