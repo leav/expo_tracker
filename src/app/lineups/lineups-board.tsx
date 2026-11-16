@@ -98,6 +98,7 @@ function boardFingerprint(board: LineupBoard): string {
             item.locationLabel ?? "",
             item.gauge.summary,
             item.website ?? "",
+            item.applicationPage ?? "",
           ].join("\u001f"),
       ),
     )
@@ -380,7 +381,12 @@ function LineupCardFace({
 }) {
   return (
     <div className={cn("grid gap-1", className)}>
-      <ConventionTitle name={item.conventionName} website={item.website} fallbackHref={detailHref}>
+      <ConventionTitle
+        name={item.conventionName}
+        website={item.website}
+        applicationPage={item.applicationPage}
+        fallbackHref={detailHref}
+      >
         {" "}
         <Link href={detailHref} className="font-medium leading-tight hover:underline">
           {item.cycleLabel}

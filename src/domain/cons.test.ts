@@ -20,6 +20,7 @@ function gaugeWithCount(count: number, sortCount = count): InterestGauge {
 function tile(overrides: Partial<ConsTile> & Pick<ConsTile, "conventionId" | "displayName">): ConsTile {
   return {
     website: null,
+    applicationPage: null,
     eventDate: null,
     status: null,
     statusLabel: null,

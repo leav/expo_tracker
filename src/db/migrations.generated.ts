@@ -125,5 +125,13 @@ export const bundledMigrations: BundledMigration[] = [
     "bps": true,
     "folderMillis": 1794448887803,
     "hash": "f14a4fbe21804e80735f9457341e394cf946ee7f031771f7eb4e493411209b12"
+  },
+  {
+    "sql": [
+      "ALTER TABLE `convention` ADD `application_page` text;"
+    ],
+    "bps": true,
+    "folderMillis": 1794806302687,
+    "hash": "14a71afe7d41609e8844e53c95958f2977d9a50ef631b803bca056847747fcaa"
   }
 ];

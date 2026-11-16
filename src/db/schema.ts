@@ -5,6 +5,7 @@ export const conventions = sqliteTable("convention", {
   displayName: text("display_name").notNull(),
   normalized: text("normalized").notNull().unique(),
   website: text("website"),
+  applicationPage: text("application_page"),
   defaultCity: text("default_city"),
   defaultRegion: text("default_region"),
   estimatedAttendance: integer("estimated_attendance"),

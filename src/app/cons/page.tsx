@@ -110,7 +110,12 @@ function ConsDetailPage() {
   return (
     <main key={workspace.revision} className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
       <header className="grid gap-2">
-        <ConventionTitle as="h1" name={convention.displayName} website={convention.website} />
+        <ConventionTitle
+          as="h1"
+          name={convention.displayName}
+          website={convention.website}
+          applicationPage={convention.applicationPage}
+        />
         <InterestGauge gauge={series.gauge} showSummary />
         <label className="flex flex-wrap items-center gap-2 text-sm">
           My interest
@@ -139,6 +144,11 @@ function ConsDetailPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Name" name="displayName" defaultValue={convention.displayName} required maskable />
             <Field label="Website" name="website" defaultValue={convention.website ?? ""} />
+            <Field
+              label="Application page"
+              name="applicationPage"
+              defaultValue={convention.applicationPage ?? ""}
+            />
             <Field label="City" name="defaultCity" defaultValue={convention.defaultCity ?? ""} />
             <Field label="State" name="defaultRegion" defaultValue={convention.defaultRegion ?? ""} />
             <Field

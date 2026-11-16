@@ -39,7 +39,7 @@ Refine findings across as many turns as the user wants:
    - Root object: `{ "format": "expo-tracker", "version": 1, "conventions": [...] }`.
    - `name`: series name without trailing year, season, or cycle number (for example `"Rhode Island Anime Con"`, `"SacAnime"`).
    - `aliases`: **only** names/acronyms that normalize to a *different* key (for example `["RI Anime Con", "RIAC"]`). Never include spacing, punctuation, case, or year/season variants of `name` or of another alias — `normalizeName` folds those to the same key and `parseDataFile` rejects duplicate keys in one file.
-   - `website`, `city`, `state`: strings; omit any that are unknown.
+   - `website`, `applicationPage`, `city`, `state`: strings; omit any that are unknown.
    - `estimatedAttendance`: non-negative integer; include **only** when backed by a source or agreed with the user in Step 2. Omit otherwise so merge import does not clobber existing data.
    - Personal fields (`interest`, edition `status`, `submittedAt`, `resultDate`, `paid`): omit unless the user asked to set them. (When `status` is omitted and `applicationStart` is in the future in `America/Los_Angeles`, Expo Tracker infers `waiting_to_apply` on import.)
    - `editions`: unique `cycle` per expo (`"2027"`, `"2027-summer"`, `"109"`). Dates must be real `YYYY-MM-DD` strings (`eventStart`, `eventEnd`, `applicationStart`, `applicationEnd`). Omit unknown dates.
@@ -63,6 +63,7 @@ Refine findings across as many turns as the user wants:
       "name": "Rhode Island Anime Con",
       "aliases": ["RI Anime Con", "RIAC"],
       "website": "https://rianimecon.com/",
+      "applicationPage": "https://rianimecon.com/artists/",
       "city": "Providence",
       "state": "RI",
       "estimatedAttendance": 6000,

@@ -24,6 +24,7 @@ export function conventionFromForm(form: FormData): ConventionInput | { error: s
   return {
     displayName: String(form.get("displayName") ?? ""),
     website: blankToNull(form.get("website")),
+    applicationPage: blankToNull(form.get("applicationPage")),
     notes: blankToNull(form.get("notes")),
     defaultCity: blankToNull(form.get("defaultCity")),
     defaultRegion: blankToNull(form.get("defaultRegion")),

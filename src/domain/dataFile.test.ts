@@ -36,6 +36,7 @@ function seedFanime(db: TrackerDb, status: "submitted" | "open" = "submitted") {
   const convention = createConvention(db, {
     displayName: "FanimeCon",
     website: "https://www.fanime.com",
+    applicationPage: "https://www.fanime.com/artists/",
     notes: "personal notes",
     defaultCity: "San Jose",
     defaultRegion: "CA",
@@ -119,6 +120,8 @@ describe("data file export", () => {
       assert.equal(edition.eventStart, "2027-05-21");
       assert.equal(edition.links?.[0]?.kind, "eventeny");
       assert.deepEqual(shared.conventions[0]?.aliases, ["Fanime"]);
+      assert.equal(shared.conventions[0]?.website, "https://www.fanime.com");
+      assert.equal(shared.conventions[0]?.applicationPage, "https://www.fanime.com/artists/");
     });
   });
 
@@ -219,6 +222,34 @@ describe("data file merge and replace", () => {
       assert.equal(row?.endDate, "2027-05-25");
       const convention = db.select().from(conventions).all()[0];
       assert.equal(convention?.displayName, "FanimeCon");
+      assert.equal(convention?.website, "https://www.fanime.com");
+      assert.equal(convention?.applicationPage, "https://www.fanime.com/artists/");
+    });
+  });
+
+  it("leaves applicationPage unchanged when the JSON omits it and clears it when null", async () => {
+    await withDb((db) => {
+      seedFanime(db);
+      const omitted: DataFile = {
+        format: "expo-tracker",
+        version: 1,
+        conventions: [{ name: "FanimeCon", city: "San Jose" }],
+      };
+      const kept = applyDataFile(db, omitted, { replace: false });
+      assert.equal(kept.ok, true);
+      assert.equal(
+        db.select().from(conventions).all()[0]?.applicationPage,
+        "https://www.fanime.com/artists/",
+      );
+
+      const cleared: DataFile = {
+        format: "expo-tracker",
+        version: 1,
+        conventions: [{ name: "FanimeCon", applicationPage: null }],
+      };
+      const applied = applyDataFile(db, cleared, { replace: false });
+      assert.equal(applied.ok, true);
+      assert.equal(db.select().from(conventions).all()[0]?.applicationPage, null);
     });
   });
 

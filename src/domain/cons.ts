@@ -90,6 +90,7 @@ export type ConsTile = {
   conventionId: number;
   displayName: string;
   website: string | null;
+  applicationPage: string | null;
   eventDate: string | null;
   status: Status | null;
   statusLabel: string | null;
@@ -282,6 +283,7 @@ export function listCons(db: TrackerDb, sort: ConsSortKey, today: string): ConsT
       conventionId: convention.id,
       displayName: convention.displayName,
       website: convention.website,
+      applicationPage: convention.applicationPage,
       eventDate: representative?.startDate ?? null,
       status,
       statusLabel: status ? statusLabels[status] : null,

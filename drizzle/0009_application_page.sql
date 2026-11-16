@@ -1,0 +1,1 @@
+ALTER TABLE `convention` ADD `application_page` text;

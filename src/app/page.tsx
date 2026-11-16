@@ -102,10 +102,11 @@ function HomePage() {
 
       <form
         onSubmit={(event) => void onCreate(event)}
-        className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] sm:items-end"
+        className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-3 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] sm:items-end"
       >
         <Field label="Expo" name="displayName" required placeholder="FanimeCon" />
         <Field label="Website" name="website" placeholder="https://" />
+        <Field label="Application page" name="applicationPage" placeholder="https://" />
         <Field label="City" name="defaultCity" placeholder="San Jose" />
         <Field label="State" name="defaultRegion" placeholder="CA" />
         <Button type="submit">Add expo</Button>
@@ -129,6 +130,7 @@ function HomePage() {
               <ConventionTitle
                 name={tile.displayName}
                 website={tile.website}
+                applicationPage={tile.applicationPage}
                 fallbackHref={detailHref}
               />
               <Link href={detailHref} aria-label={summary} className="grid gap-1">

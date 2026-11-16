@@ -6,6 +6,7 @@ import { normalizeName } from "./names";
 export type ConventionInput = {
   displayName: string;
   website: string | null;
+  applicationPage?: string | null;
   notes: string | null;
   defaultCity?: string | null;
   defaultRegion?: string | null;
@@ -27,6 +28,7 @@ export function createConvention(db: TrackerDb, input: ConventionInput): DomainR
       displayName,
       normalized,
       website: input.website,
+      applicationPage: input.applicationPage ?? null,
       notes: input.notes,
       defaultCity: input.defaultCity ?? null,
       defaultRegion: input.defaultRegion ?? null,
@@ -59,6 +61,7 @@ export function updateConvention(
       displayName,
       normalized,
       website: input.website,
+      applicationPage: input.applicationPage ?? null,
       notes: input.notes,
       defaultCity: input.defaultCity ?? null,
       defaultRegion: input.defaultRegion ?? null,

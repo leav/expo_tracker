@@ -39,6 +39,7 @@ export type DataFileConvention = {
   name: string;
   aliases?: string[];
   website?: string | null;
+  applicationPage?: string | null;
   city?: string | null;
   state?: string | null;
   estimatedAttendance?: number | null;
@@ -403,6 +404,7 @@ function exportConvention(db: TrackerDb, id: number, includeApplicationStatus: b
   const record: DataFileConvention = { name: series.convention.displayName };
   if (series.aliases.length > 0) record.aliases = series.aliases.map((row) => row.name);
   assignOptional(record, "website", series.convention.website);
+  assignOptional(record, "applicationPage", series.convention.applicationPage);
   assignOptional(record, "city", series.convention.defaultCity);
   assignOptional(record, "state", series.convention.defaultRegion);
   if (series.convention.estimatedAttendance != null) {
@@ -463,6 +465,7 @@ function writeConvention(
       ? createConvention(db, {
           displayName,
           website: incoming.website ?? null,
+          applicationPage: incoming.applicationPage ?? null,
           notes: incoming.notes ?? null,
           defaultCity: incoming.city ?? null,
           defaultRegion: incoming.state ?? null,
@@ -473,6 +476,8 @@ function writeConvention(
           id: current.id,
           displayName,
           website: incoming.website !== undefined ? incoming.website : current.website,
+          applicationPage:
+            incoming.applicationPage !== undefined ? incoming.applicationPage : current.applicationPage,
           notes: incoming.notes !== undefined ? incoming.notes : current.notes,
           defaultCity: incoming.city !== undefined ? incoming.city : current.defaultCity,
           defaultRegion: incoming.state !== undefined ? incoming.state : current.defaultRegion,
@@ -582,6 +587,8 @@ function parseConvention(raw: unknown, index: number): DomainResult<DataFileConv
   if (!aliases.ok) return aliases;
   const website = optionalString(raw, "website", "website");
   if (!website.ok) return website;
+  const applicationPage = optionalString(raw, "applicationPage", "applicationPage");
+  if (!applicationPage.ok) return applicationPage;
   const city = optionalString(raw, "city", "city");
   if (!city.ok) return city;
   const state = optionalString(raw, "state", "state");
@@ -635,6 +642,7 @@ function parseConvention(raw: unknown, index: number): DomainResult<DataFileConv
   const value: DataFileConvention = { name: name.value };
   if (aliases.value) value.aliases = aliases.value;
   if (website.value !== undefined) value.website = website.value;
+  if (applicationPage.value !== undefined) value.applicationPage = applicationPage.value;
   if (city.value !== undefined) value.city = city.value;
   if (state.value !== undefined) value.state = state.value;
   if (estimatedAttendance !== undefined) value.estimatedAttendance = estimatedAttendance;
