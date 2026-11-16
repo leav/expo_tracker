@@ -19,6 +19,7 @@ const sorts: { key: ConsSortKey; label: string; title: string }[] = [
   { key: "interest", label: "Interest", title: "Sort by interest gauge (attended counts as two)" },
   { key: "time", label: "Time of year", title: "Sort by time of year" },
   { key: "state", label: "State", title: "Sort by state names" },
+  { key: "attendance", label: "Attendance", title: "Sort by attendance (high to low)" },
 ];
 
 export default function Home() {
@@ -115,11 +116,16 @@ function HomePage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {tiles.map((tile) => {
           const detailHref = consPath(tile.conventionId);
+          const attendanceLabel =
+            tile.estimatedAttendance == null
+              ? "Attendance unknown"
+              : tile.estimatedAttendance.toLocaleString("en-US");
           const summary = [
             mask(tile.displayName),
             tile.eventDate ?? "no event date",
             tile.statusLabel ?? (tile.hasEditions ? "unknown status" : "no editions"),
             tile.locationLabel ?? "no city",
+            ...(sort === "attendance" ? [attendanceLabel] : []),
             tile.gauge.summary || "no gauge",
           ].join(", ");
           return (
@@ -138,6 +144,9 @@ function HomePage() {
                 <span className="text-sm text-muted-foreground">{tile.eventDate ?? "No event date"}</span>
                 <span className="text-sm">{tile.hasEditions ? tile.statusLabel ?? "Unknown" : "No editions"}</span>
                 <span className="text-sm text-muted-foreground">{tile.locationLabel ?? "City unknown"}</span>
+                {sort === "attendance" ? (
+                  <span className="text-sm text-muted-foreground">{attendanceLabel}</span>
+                ) : null}
               </Link>
             </article>
           );

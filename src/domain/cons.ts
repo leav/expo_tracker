@@ -7,7 +7,7 @@ import { editionInterest, isStatus, statusLabels, type Status } from "./status";
 
 export { locationLabel };
 
-export const consSortKeys = ["name", "interest", "time", "state"] as const;
+export const consSortKeys = ["name", "interest", "time", "state", "attendance"] as const;
 export type ConsSortKey = (typeof consSortKeys)[number];
 
 export type RepresentativeEdition = {
@@ -97,6 +97,7 @@ export type ConsTile = {
   city: string | null;
   region: string | null;
   locationLabel: string | null;
+  estimatedAttendance: number | null;
   gauge: InterestGauge;
   startMonth: number | null;
   hasEditions: boolean;
@@ -258,6 +259,12 @@ export function sortCons(tiles: ConsTile[], key: ConsSortKey): ConsTile[] {
       if (b.startMonth == null) return -1;
       return a.startMonth - b.startMonth || name(a, b);
     }
+    if (key === "attendance") {
+      if (a.estimatedAttendance == null && b.estimatedAttendance == null) return name(a, b);
+      if (a.estimatedAttendance == null) return 1;
+      if (b.estimatedAttendance == null) return -1;
+      return b.estimatedAttendance - a.estimatedAttendance || name(a, b);
+    }
     return name(a, b);
   });
   return sorted;
@@ -290,6 +297,7 @@ export function listCons(db: TrackerDb, sort: ConsSortKey, today: string): ConsT
       city,
       region,
       locationLabel: locationLabel(city, region),
+      estimatedAttendance: convention.estimatedAttendance ?? null,
       gauge: interestGauge(convention.manualInterest, ownEditions),
       startMonth: startMonth(representative?.startDate ?? null),
       hasEditions: ownEditions.length > 0,

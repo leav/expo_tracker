@@ -27,6 +27,7 @@ function tile(overrides: Partial<ConsTile> & Pick<ConsTile, "conventionId" | "di
     city: null,
     region: null,
     locationLabel: null,
+    estimatedAttendance: null,
     gauge: emptyInterestGauge,
     startMonth: null,
     hasEditions: true,
@@ -185,9 +186,24 @@ describe("representative edition, interest, and cons sorts", () => {
     );
   });
 
+  it("sorts attendance high to low, unknown last, with name as the tie-break", () => {
+    const tiles = [
+      tile({ conventionId: 1, displayName: "Beta", estimatedAttendance: 10000 }),
+      tile({ conventionId: 2, displayName: "Alpha", estimatedAttendance: 50000 }),
+      tile({ conventionId: 3, displayName: "Gamma", estimatedAttendance: null }),
+      tile({ conventionId: 4, displayName: "Delta", estimatedAttendance: 50000 }),
+      tile({ conventionId: 5, displayName: "Epsilon", estimatedAttendance: 0 }),
+    ];
+    assert.deepEqual(
+      sortCons(tiles, "attendance").map((row) => row.displayName),
+      ["Alpha", "Delta", "Beta", "Epsilon", "Gamma"],
+    );
+  });
+
   it("defaults expos sort to name and ignores unknown keys", () => {
     assert.equal(parseConsSort(undefined), "name");
     assert.equal(parseConsSort("interest"), "interest");
+    assert.equal(parseConsSort("attendance"), "attendance");
     assert.equal(parseConsSort("distance"), "name");
   });
 });

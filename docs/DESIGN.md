@@ -186,7 +186,7 @@ A backup reminder bar sits under the nav on every page when the workspace has ex
 
 | Route | Purpose |
 | --- | --- |
-| `/` | **Expos grid:** Compact catalog of expos with add-expo form and four sort modes. |
+| `/` | **Expos grid:** Compact catalog of expos with add-expo form and five sort modes. |
 | `/cons?id=` | **Expo detail:** Interest gauge, **My interest**, expo metadata & delete, aliases, and editions ordered by `cycle_label`. (`/series?id=` redirects here.) |
 | `/lineups` | **Lineups board:** Five-column drag-and-drop status board ordered by each column's action date. |
 | `/calendar` | **Calendar grid:** Read-only 12-month year view of application opens and event starts. |
@@ -200,12 +200,13 @@ Each tile summarizes one representative edition for its convention:
 2. Otherwise, most recent past edition with `start_date < today`;
 3. Otherwise, the edition with the greatest `cycle_label` (or **No editions** when none exist).
 
-Equal-date ties break by `cycle_label`. Sort buttons are **Name**, **Interest**, **Time of year**, **State** (hover titles: sort by names / interest gauge (attended counts as two) / time of year / state names). Default is **Name** (`/` with no `?sort=`). Sorts (with `display_name` ascending as final tie-breaker):
+Equal-date ties break by `cycle_label`. Sort buttons are **Name**, **Interest**, **Time of year**, **State**, **Attendance** (hover titles: sort by names / interest gauge (attended counts as two) / time of year / state names / attendance (high to low)). Default is **Name** (`/` with no `?sort=`). Sorts (with `display_name` ascending as final tie-breaker):
 
 - **Name (`name`):** `display_name` ascending.
 - **Interest (`interest`):** Gauge `sortCount` descending (attended ticks count as 2).
 - **Time of year (`time`):** Summarized `start_date` month (`1..12`) ascending, ignoring year, unknown values last.
 - **State (`state`):** `default_region` ascending, unknown values last.
+- **Attendance (`attendance`):** Convention `estimated_attendance` descending, unknown values last. Cards show the grouped attendance number (or **Attendance unknown**) only in this sort.
 
 On Expos, Lineups, and the detail header, the convention name is in-app text (a `/cons?id=` link on Expos and Lineups; plain heading on detail). Valid HTTP(S) or host-like `website` and `application_page` values (`hrefForWebsite`) render as icon links beside the name (`Globe` for website, `ClipboardPen` for application page), each opening in a new tab. Missing or invalid URLs hide that icon. The rest of each Expos or Lineups card still links to `/cons?id=`.
 
