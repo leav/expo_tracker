@@ -4,7 +4,6 @@ import { cn } from "../lib/utils";
 
 const colorVar: Record<GaugeTick["color"], string> = {
   manual: "var(--gauge-manual)",
-  unknown: "transparent",
   waiting: "var(--gauge-waiting)",
   approved: "var(--gauge-approved)",
   done: "var(--gauge-done)",
@@ -42,14 +41,11 @@ export function InterestGauge({
           <span
             key={`${tick.kind}-${index}`}
             aria-hidden="true"
-            className={cn(
-              "box-border shrink-0 rounded-[1px]",
-              tick.filled ? "border-0" : "border border-muted-foreground bg-transparent",
-            )}
+            className="box-border shrink-0 rounded-[1px] border-0"
             style={{
               height: "var(--gauge-tick-length)",
               width: tick.kind === "attended" ? "var(--gauge-tick-length)" : "var(--gauge-tick-width)",
-              ...(tick.filled ? { backgroundColor: colorVar[tick.color] } : {}),
+              backgroundColor: colorVar[tick.color],
             }}
           />
         ))}

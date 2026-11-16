@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  conventionInterest,
   emptyInterestGauge,
   interestGauge,
   parseConsSort,
@@ -75,33 +74,7 @@ describe("representative edition, interest, and cons sorts", () => {
     assert.equal(pickAttendanceValue(rows, "2026-11-05"), 27500);
   });
 
-  it("sums status-weighted edition interest plus signed manual interest", () => {
-    assert.equal(
-      conventionInterest(0, [
-        { status: "waiting_to_apply" },
-        { status: "open" },
-        { status: "submitted" },
-        { status: "waitlisted" },
-        { status: "approved" },
-        { status: "attended" },
-        { status: "rejected" },
-      ]),
-      7,
-    );
-    assert.equal(conventionInterest(0, [{ status: "skipped" }]), -1);
-    assert.equal(conventionInterest(0, [{ status: "unknown" }, { status: "withdrawn" }]), 0);
-    assert.equal(
-      conventionInterest(-2, [
-        { status: "attended" },
-        { status: "approved" },
-        { status: "skipped" },
-        { status: "unknown" },
-      ]),
-      -1,
-    );
-  });
-
-  it("builds gauge ticks by status family, including hollow unknown and pink manual ticks", () => {
+  it("builds gauge ticks by status family, omitting unknown and including pink manual ticks", () => {
     const gauge = interestGauge(3, [
       { status: "skipped" },
       { status: "attended" },
@@ -112,34 +85,30 @@ describe("representative edition, interest, and cons sorts", () => {
       { status: "open" },
       { status: "rejected" },
     ]);
-    assert.equal(gauge.count, 11);
-    assert.equal(gauge.sortCount, 13);
+    assert.equal(gauge.count, 10);
+    assert.equal(gauge.sortCount, 12);
     assert.equal(
       gauge.summary,
-      "3 interest, 1 unknown, 1 ready, 1 submitted, 2 attended, 1 withdrawn, 1 rejected, 1 skipped",
+      "3 interest, 1 ready, 1 submitted, 2 attended, 1 withdrawn, 1 rejected, 1 skipped",
     );
     assert.deepEqual(
-      gauge.segments.map((segment) => ({ kind: segment.kind, color: segment.color, filled: segment.filled })),
+      gauge.segments.map((segment) => ({ kind: segment.kind, color: segment.color })),
       [
-        { kind: "manual", color: "manual", filled: true },
-        { kind: "unknown", color: "unknown", filled: false },
-        { kind: "open", color: "waiting", filled: true },
-        { kind: "submitted", color: "waiting", filled: true },
-        { kind: "attended", color: "done", filled: true },
-        { kind: "withdrawn", color: "done", filled: true },
-        { kind: "rejected", color: "closed", filled: true },
-        { kind: "skipped", color: "skipped", filled: true },
+        { kind: "manual", color: "manual" },
+        { kind: "open", color: "waiting" },
+        { kind: "submitted", color: "waiting" },
+        { kind: "attended", color: "done" },
+        { kind: "withdrawn", color: "done" },
+        { kind: "rejected", color: "closed" },
+        { kind: "skipped", color: "skipped" },
       ],
     );
   });
 
-  it("omits negative manual ticks and empty gauges", () => {
+  it("omits negative manual ticks, unknown editions, and empty gauges", () => {
     assert.deepEqual(interestGauge(0, []), emptyInterestGauge);
     assert.deepEqual(interestGauge(-2, []), emptyInterestGauge);
-    const unknownOnly = interestGauge(-4, [{ status: "unknown" }, { status: "unknown" }]);
-    assert.equal(unknownOnly.count, 2);
-    assert.equal(unknownOnly.summary, "2 unknown");
-    assert.equal(unknownOnly.ticks.every((tick) => !tick.filled), true);
+    assert.deepEqual(interestGauge(-4, [{ status: "unknown" }, { status: "unknown" }]), emptyInterestGauge);
   });
 
   it("shifts a tick from one status to another for optimistic lineup moves", () => {

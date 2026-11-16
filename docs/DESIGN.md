@@ -131,26 +131,25 @@ Identity rules:
 
 Each edition has a single lifecycle status:
 
-| Status | UI Label | Lineups Action Date | Interest Score | Gauge |
-| --- | --- | --- | --- | --- |
-| `unknown` | Unknown | Excluded | `0` | Hollow |
-| `waiting_to_apply` | Waiting to apply | `application_start_date` (`Date not set` sorts first) | `+1` | Yellow |
-| `open` | Ready to apply | `application_end_date`, or `application_start_date + 7 days` labeled `Estimated close` | `+1` | Yellow |
-| `submitted` | Submitted | `result_date` (`Date not set` sorts first) | `+1` | Yellow |
-| `waitlisted` | Waitlisted | `start_date` (`Date not set` sorts first) | `+1` | Yellow |
-| `approved` | Approved | `start_date` (`Date not set` sorts first) | `+1` | Green |
-| `attended` | Attended | Excluded (drop target when dragging `approved` on Lineups) | `+1` | Blue square |
-| `rejected` | Rejected | Excluded | `+1` | Scarlet |
-| `withdrawn` | Withdrawn | Excluded (drop target when dragging `approved` on Lineups) | `0` | Blue |
-| `skipped` | Skipped | Excluded | `-1` | Gray |
+| Status | UI Label | Lineups Action Date | Gauge |
+| --- | --- | --- | --- |
+| `unknown` | Unknown | Excluded | Omitted |
+| `waiting_to_apply` | Waiting to apply | `application_start_date` (`Date not set` sorts first) | Yellow |
+| `open` | Ready to apply | `application_end_date`, or `application_start_date + 7 days` labeled `Estimated close` | Yellow |
+| `submitted` | Submitted | `result_date` (`Date not set` sorts first) | Yellow |
+| `waitlisted` | Waitlisted | `start_date` (`Date not set` sorts first) | Yellow |
+| `approved` | Approved | `start_date` (`Date not set` sorts first) | Green |
+| `attended` | Attended | Excluded (drop target when dragging `approved` on Lineups) | Blue square |
+| `rejected` | Rejected | Excluded | Scarlet |
+| `withdrawn` | Withdrawn | Excluded (drop target when dragging `approved` on Lineups) | Blue |
+| `skipped` | Skipped | Excluded | Gray |
 
 When creating a new edition with status `unknown`, if `application_start_date` is in the future relative to today in `America/Los_Angeles`, status initializes to `waiting_to_apply`.
 
 ### Interest Calculation (`src/domain/cons.ts`)
 
-- **Total interest:** `conventionInterest = manual_interest + sum(editionInterest(edition.status))`. Used for gauges and Expos Interest sort, not as a calendar filter.
-- **Gauge:** One CSS tick per edition, plus one light-pink tick per positive `manual_interest`. Negative manual interest does not render ticks. Attended ticks are squares; every other status is a rectangle whose height matches the square side and whose width satisfies `side = 2 × width + gap`, so one attended square occupies the same width as two rectangles plus the gap between them. Ticks are grouped left to right: manual (light pink), unknown (hollow), waiting/ready/submitted/waitlisted (yellow), approved (green), attended/withdrawn (blue), rejected (scarlet), skipped (gray). Hover and `aria-label` use a zero-omitting summary such as `3 interest, 1 submitted, 2 attended`. An empty gauge renders nothing.
-- **Expos Interest sort:** Gauge `sortCount` descending (editions + positive manual ticks, including hollow unknown; each attended tick counts as 2), then `display_name`. Expos cards use a neutral `--card` background with no interest tint or score number.
+- **Gauge:** One CSS tick per edition except `unknown`, plus one light-pink tick per positive `manual_interest`. Unknown editions and negative manual interest do not render ticks. Attended ticks are squares; every other status is a rectangle whose height matches the square side and whose width satisfies `side = 2 × width + gap`, so one attended square occupies the same width as two rectangles plus the gap between them. Ticks are grouped left to right: manual (light pink), waiting/ready/submitted/waitlisted (yellow), approved (green), attended/withdrawn (blue), rejected (scarlet), skipped (gray). Hover and `aria-label` use a zero-omitting summary such as `3 interest, 1 submitted, 2 attended`. An empty gauge renders nothing.
+- **Expos Interest sort:** Gauge `sortCount` descending (visible ticks + positive manual ticks; each attended tick counts as 2), then `display_name`. Expos cards use a neutral `--card` background with no interest tint or score number.
 - **Display:** The gauge sits under the convention name on Expos, Lineups (convention-level), Calendar chips (compact), and `/cons?id=`. Detail shows the summary in plain text and keeps the **My interest** field.
 
 ### Date Auto-fill & Status Transitions (`src/domain/editionDates.ts`, `src/domain/statusDates.ts`)

@@ -3,7 +3,7 @@ import { conventions, editions } from "../db/schema";
 import { compareCycleLabels } from "./cycles";
 import type { TrackerDb } from "./db";
 import { locationLabel } from "./location";
-import { editionInterest, isStatus, statusLabels, type Status } from "./status";
+import { isStatus, statusLabels, type Status } from "./status";
 
 export { locationLabel };
 
@@ -19,7 +19,6 @@ export type RepresentativeEdition = {
 
 export const gaugeKindOrder = [
   "manual",
-  "unknown",
   "waiting_to_apply",
   "open",
   "submitted",
@@ -35,7 +34,6 @@ export type GaugeKind = (typeof gaugeKindOrder)[number];
 
 export type GaugeColor =
   | "manual"
-  | "unknown"
   | "waiting"
   | "approved"
   | "done"
@@ -45,14 +43,12 @@ export type GaugeColor =
 export type GaugeSegment = {
   kind: GaugeKind;
   count: number;
-  filled: boolean;
   color: GaugeColor;
   label: string;
 };
 
 export type GaugeTick = {
   kind: GaugeKind;
-  filled: boolean;
   color: GaugeColor;
 };
 
@@ -74,7 +70,6 @@ export const emptyInterestGauge: InterestGauge = {
 
 const gaugeLabels: Record<GaugeKind, string> = {
   manual: "interest",
-  unknown: "unknown",
   waiting_to_apply: "waiting",
   open: "ready",
   submitted: "submitted",
@@ -85,6 +80,10 @@ const gaugeLabels: Record<GaugeKind, string> = {
   rejected: "rejected",
   skipped: "skipped",
 };
+
+function isGaugeKind(value: string): value is GaugeKind {
+  return (gaugeKindOrder as readonly string[]).includes(value);
+}
 
 export type ConsTile = {
   conventionId: number;
@@ -146,19 +145,10 @@ export function pickAttendanceValue<T extends { startDate: string | null; cycleL
   return pickRepresentativeEdition(withValues, today)?.attendance ?? null;
 }
 
-export function conventionInterest(
-  manualInterest: number,
-  editionRows: { status: string }[],
-): number {
-  return manualInterest + editionRows.reduce((sum, row) => sum + editionInterest(row.status), 0);
-}
-
 function gaugeColor(kind: GaugeKind): GaugeColor {
   switch (kind) {
     case "manual":
       return "manual";
-    case "unknown":
-      return "unknown";
     case "waiting_to_apply":
     case "open":
     case "submitted":
@@ -176,8 +166,9 @@ function gaugeColor(kind: GaugeKind): GaugeColor {
   }
 }
 
-function gaugeFilled(kind: GaugeKind): boolean {
-  return kind !== "unknown";
+function adjustGaugeCount(counts: Map<GaugeKind, number>, status: string, delta: number) {
+  if (!isGaugeKind(status)) return;
+  counts.set(status, (counts.get(status) ?? 0) + delta);
 }
 
 function buildInterestGauge(counts: Map<GaugeKind, number>): InterestGauge {
@@ -186,11 +177,10 @@ function buildInterestGauge(counts: Map<GaugeKind, number>): InterestGauge {
   for (const kind of gaugeKindOrder) {
     const count = counts.get(kind) ?? 0;
     if (count <= 0) continue;
-    const filled = gaugeFilled(kind);
     const color = gaugeColor(kind);
-    segments.push({ kind, count, filled, color, label: gaugeLabels[kind] });
+    segments.push({ kind, count, color, label: gaugeLabels[kind] });
     for (let index = 0; index < count; index++) {
-      ticks.push({ kind, filled, color });
+      ticks.push({ kind, color });
     }
   }
   if (ticks.length === 0) return emptyInterestGauge;
@@ -211,8 +201,7 @@ export function interestGauge(
   const manualTicks = Math.max(0, Math.trunc(manualInterest));
   if (manualTicks > 0) counts.set("manual", manualTicks);
   for (const row of editionRows) {
-    if (!isStatus(row.status)) continue;
-    counts.set(row.status, (counts.get(row.status) ?? 0) + 1);
+    adjustGaugeCount(counts, row.status, 1);
   }
   return buildInterestGauge(counts);
 }
@@ -222,8 +211,8 @@ export function shiftInterestGauge(gauge: InterestGauge, from: Status, to: Statu
   for (const segment of gauge.segments) {
     counts.set(segment.kind, segment.count);
   }
-  counts.set(from, (counts.get(from) ?? 0) - 1);
-  counts.set(to, (counts.get(to) ?? 0) + 1);
+  adjustGaugeCount(counts, from, -1);
+  adjustGaugeCount(counts, to, 1);
   return buildInterestGauge(counts);
 }
 
