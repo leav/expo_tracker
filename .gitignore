@@ -13,5 +13,6 @@ data/*.sqlite-*
 data/*.sqlite-journal
 data/sheet.csv
 imports/
+exports/
 agent-tools
 .DS_Store
