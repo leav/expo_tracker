@@ -17,3 +17,4 @@ imports/
 exports/
 agent-tools
 .DS_Store
+branding/.tmp
